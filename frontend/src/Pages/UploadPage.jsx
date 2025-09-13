@@ -52,11 +52,9 @@ const UploadPage = () => {
       formDataToSend.append("employeeId", formData.employeeId);
       formDataToSend.append("pin", formData.pin);
 
-      formData.files.forEach((file, index) => {
-        formDataToSend.append(`file_${index}`, file);
-      });
+      formDataToSend.append("file", formData.files[0]);
 
-      const response = await fetch("http://localhost:5000/uploadDetails", {
+      const response = await fetch("http://localhost:8080/api/upload", {
         method: "POST",
         body: formDataToSend,
       });

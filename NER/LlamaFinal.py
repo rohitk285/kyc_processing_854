@@ -204,6 +204,7 @@ def convert_to_strict_json(response_content):
 
 # Main function to process PDF and extract data
 def process_pdf_with_llama(file_stream, json_output_path=None):
+    print("hello")
     """
     Process a PDF file-like object and extract structured data using in-memory image processing.
 
