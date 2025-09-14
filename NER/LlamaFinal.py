@@ -1,21 +1,17 @@
-import fitz  # PyMuPDF
+import os
 import json
 import base64
-import os
-from pdf2image import convert_from_bytes
+import fitz
+import requests
+import tempfile
 from io import BytesIO
 from PIL import Image
-from together import Together
-import tempfile
 from dotenv import load_dotenv
+
 load_dotenv()
 
-# Initialize Together client using the API key from the environment variable
-api_key = os.getenv("TOGETHER_API_KEY")
-if not api_key:
-    exit("Error: TOGETHER_API_KEY environment variable is not set.")
-os.environ["TOGETHER_API_KEY"] = api_key
-client = Together()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent"
 
 getDescriptionPrompt = """You are tasked with extracting and classifying the document type from the provided image and outputting only the named entities in strict JSON format. Follow these rules strictly:
 1. Always include the document_type field with an exact and consistent value for the same type of document (e.g., "PAN Card" for all PAN cards).
@@ -93,16 +89,6 @@ Here are examples for different document types to guide your output:
 For every receipt or document, generate the response in the same format and structure, maintaining consistency for the document_type field. Always ensure the JSON format is valid."""
 
 def pdf_to_images(file_stream, max_images=10):
-    """
-    Convert each page of a PDF into in-memory image files (BytesIO).
-
-    Args:
-    - file_stream (BytesIO): File-like object containing the PDF.
-    - max_images (int): Maximum number of images to extract.
-
-    Returns:
-    - List[BytesIO]: List of image files in memory.
-    """
     image_buffers = []
 
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_pdf:
@@ -115,7 +101,7 @@ def pdf_to_images(file_stream, max_images=10):
         pix = page.get_pixmap(dpi=300)
 
         img_buffer = BytesIO()
-        img_buffer.name = f"receipt_page_{page_num + 1}.png"
+        img_buffer.name = f"page_{page_num + 1}.png"
         img_buffer.write(pix.tobytes("png"))
         img_buffer.seek(0)
         image_buffers.append(img_buffer)
@@ -124,185 +110,107 @@ def pdf_to_images(file_stream, max_images=10):
     os.remove(temp_pdf_path)
     return image_buffers
 
-# Function to encode the image to Base64
-def encode_image(image_path):
-    """Encode the image to Base64."""
-    try:
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode("utf-8")
-    except FileNotFoundError:
-        print(f"Error: Could not find image file at {image_path}")
-        return None
-    except Exception as e:
-        print(f"An error occurred while reading the image: {str(e)}")
-        return None
+def base64_encode_image(image_bytesio):
+    buffered = BytesIO()
+    image = Image.open(image_bytesio)
+    image.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-# Get the first 10 PNG images from the folder
-def get_image_files(folder_path, limit=10):
-    try:
-        images = [
-            os.path.join(folder_path, file)
-            for file in os.listdir(folder_path)
-            if file.endswith(".png") or file.endswith(".jpg")
+def call_gemini_api(prompt, base64_image):
+    headers = {
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/png",
+                            "data": base64_image
+                        }
+                    }
+                ]
+            }
         ]
-        return images[:limit]
-    except Exception as e:
-        print(f"Error reading the folder: {str(e)}")
+    }
+
+    response = requests.post(
+        f"{GEMINI_API_URL}?key={GEMINI_API_KEY}",
+        headers=headers,
+        json=payload
+    )
+
+    if response.status_code == 200:
+        candidates = response.json().get("candidates", [])
+        if candidates:
+            print("Raw Gemini Response:", json.dumps(response.json(), indent=2))
+            return candidates[0]["content"]["parts"][0]["text"]
+    else:
+        print("Gemini API Error:", response.text)
+    return None
+
+def convert_to_strict_json(response_content):
+    try:
+        response_content = response_content.strip()
+        start_idx = response_content.find("[")
+        end_idx = response_content.rfind("]") + 1
+        if start_idx != -1 and end_idx != -1:
+            return json.loads(response_content[start_idx:end_idx])
+        else:
+            print("Error: JSON boundaries not found.")
+            return []
+    except json.JSONDecodeError:
+        print("Error decoding JSON.")
         return []
 
-# Function to save JSON output to a file
-def save_json_output(data, output_path):
-    """Save the JSON data to a file."""
-    try:
-        with open(output_path, "w") as json_file:
-            json.dump(data, json_file, indent=4)
-        print(f"JSON output saved to {output_path}")
-    except Exception as e:
-        print(f"Error saving JSON output: {str(e)}")
-
-# Function to normalize JSON response
 def normalize_json_response(parsed_response):
-    """Normalize the JSON response to handle missing fields."""
     normalized = []
     required_fields = ["document_type", "named_entities"]
-
     for entry in parsed_response:
         normalized_entry = {key: entry.get(key, "") for key in required_fields}
-        if "named_entities" in normalized_entry and isinstance(normalized_entry["named_entities"], dict):
-            # Ensure named_entities is a dictionary
+        if isinstance(normalized_entry["named_entities"], dict):
             normalized_entry["named_entities"] = {
                 key: value for key, value in normalized_entry["named_entities"].items()
             }
         else:
             normalized_entry["named_entities"] = {}
-
         normalized.append(normalized_entry)
-
     return normalized
 
-# Function to convert output to strict JSON format
-def convert_to_strict_json(response_content):
-    """Ensure the output is in proper JSON format."""
-    try:
-        # Attempt to parse as JSON directly
-        if response_content.startswith("[") and response_content.endswith("]"):
-            return json.loads(response_content)
-        else:
-            print("Warning: Response does not strictly follow JSON format. Attempting to convert.")
-            response_content = response_content.strip()
-            start_idx = response_content.find("[")
-            end_idx = response_content.rfind("]") + 1
-            if start_idx != -1 and end_idx != -1:
-                json_part = response_content[start_idx:end_idx]
-                return json.loads(json_part)
-            else:
-                print("Error: Could not locate JSON in the response.")
-                return []
-    except json.JSONDecodeError:
-        print("Error: Failed to parse the response as JSON.")
-        return []
-
-# Main function to process PDF and extract data
-def process_pdf_with_llama(file_stream, json_output_path=None):
-    print("hello")
-    """
-    Process a PDF file-like object and extract structured data using in-memory image processing.
-
-    Args:
-    - file_stream (BytesIO): File-like object containing the PDF.
-    - json_output_path (str): Path for saving the JSON output.
-
-    Returns:
-    - List[dict]: List of extracted structured data entries.
-    """
-    # Get in-memory images from PDF
+def process_pdf_with_gemini(file_stream, json_output_path=None):
     images = pdf_to_images(file_stream)
-
     if not images:
-        print("No images found in the PDF. Exiting.")
         return []
 
     all_responses = []
     valid_document_types = ["Aadhaar Card", "PAN Card", "Cheque", "Credit Card"]
 
     for idx, image_io in enumerate(images):
-        print(f"\nProcessing Image {idx + 1}/{len(images)}")
+        print(f"Processing page {idx+1}/{len(images)}")
 
-        # Convert image BytesIO to base64 string
-        image_io.seek(0)
-        image = Image.open(image_io)
-        buffered = BytesIO()
-        image.save(buffered, format="PNG")
-        base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        base64_image = base64_encode_image(image_io)
+        raw_response = call_gemini_api(getDescriptionPrompt, base64_image)
+        if not raw_response:
+            continue
 
-        valid_response = False
-        while not valid_response:
-            stream = client.chat.completions.create(
-                model="meta-llama/Llama-Vision-Free",
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": getDescriptionPrompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/png;base64,{base64_image}"
-                            },
-                        },
-                    ],
-                }],
-                stream=True,
-            )
+        parsed = convert_to_strict_json(raw_response)
+        normalized = normalize_json_response(parsed)
 
-            print("Model Response:", end=" ", flush=True)
-            response_content = ""
-            for chunk in stream:
-                if not hasattr(chunk, 'choices') or not chunk.choices:
-                    continue
-
-                choice = chunk.choices[0]
-                if not hasattr(choice, 'delta'):
-                    continue
-
-                delta = choice.delta
-                if not hasattr(delta, 'content'):
-                    continue
-
-                content = delta.content
-                if content is not None:
-                    print(content, end="", flush=True)
-                    response_content += content
-
-            print()  # Print a newline after the response
-
-            # Convert and normalize the JSON response
-            parsed_response = convert_to_strict_json(response_content)
-            normalized_response = normalize_json_response(parsed_response)
-
-            # Check for valid document type and required fields
-            for entry in normalized_response:
-                document_type = entry.get("document_type", "")
-                named_entities = entry.get("named_entities", {})
-
-                if document_type == "Aadhaar Card" and "Aadhaar Number" not in named_entities:
-                    print("Invalid Aadhaar Card: Missing Aadhaar Number")
-                    continue
-                if document_type == "PAN Card" and "Permanent Account Number" not in named_entities:
-                    print("Invalid PAN Card: Missing Permanent Account Number")
-                    continue
-
-                if document_type in valid_document_types:
-                    valid_response = True
-                    all_responses.append(entry)
-                    break
+        for entry in normalized:
+            doc_type = entry.get("document_type", "")
+            named = entry.get("named_entities", {})
+            if doc_type == "Aadhaar Card" and "Aadhaar Number" not in named:
+                continue
+            if doc_type == "PAN Card" and "Permanent Account Number" not in named:
+                continue
+            if doc_type in valid_document_types:
+                all_responses.append(entry)
+                break
 
     if json_output_path:
-        save_json_output(all_responses, json_output_path)
+        with open(json_output_path, "w") as f:
+            json.dump(all_responses, f, indent=4)
 
     return all_responses
-
-# Example usage
-# pdf_path = "/home/george/MachineLearning/ML/1AadharPDF.pdf"  # Replace with your PDF file path
-# output_folder = "aadharimage"  # Replace with your desired output folder
-# json_output_path = "output_responses_aadhar.json"  # Path for saving the JSON output
-# process_pdf_with_llama(pdf_path, output_folder, json_output_path)
