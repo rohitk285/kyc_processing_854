@@ -3,7 +3,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from io import BytesIO
-from LlamaFinal import process_pdf_with_gemini
+from text_ext import process_pdf_with_gemini
 
 app = Flask(__name__)
 CORS(app)
