@@ -21,17 +21,15 @@ import java.util.*;
 @RestController
 @RequestMapping("/api")
 public class UploadController {
-    @CrossOrigin(origins = "http://localhost:5173") // frontend localhost
+    @CrossOrigin(origins = "http://localhost:5173") // frontend localhost - not needed, can be removed
     @PostMapping("/upload")
     public ResponseEntity<?> handleUpload(
-            @RequestParam("employeeId") String empId,
-            @RequestParam("pin") String pin,
-            @RequestParam("file") MultipartFile file) { // only one file as of now
+        @RequestParam("file") MultipartFile file) { // only one file as of now
         try {
             // Read file bytes once
             byte[] fileBytes = file.getBytes();
 
-            // Upload to GDrive through service account
+            // uploading to GDrive through service account
             InputStream driveStream = new ByteArrayInputStream(fileBytes);
             String driveLink = GoogleDriveUploader.uploadToDrive(
                     driveStream,
@@ -82,10 +80,9 @@ public class UploadController {
             // storing data in MongoDB
             try (var mongoClient = MongoClients.create("mongodb://localhost:27017")) {
                 MongoDatabase db = mongoClient.getDatabase("kyc_db");
-                MongoCollection<Document> userCollection = db.getCollection("users");
+                MongoCollection<Document> documentCollection = db.getCollection("document");
 
                 for (Map<String, Object> doc : extracted) {
-                    String name = (String) doc.get("name");
                     Object docTypeObj = doc.get("document_type");
 
                     List<String> documentTypes = new ArrayList<>();
@@ -96,23 +93,31 @@ public class UploadController {
                         documentTypes.add(s);
                     }
 
-                    Document userDoc = new Document();
-                    userDoc.append("cust_id", Integer.parseInt(empId));
-                    userDoc.append("name", name);
-                    userDoc.append("dob", doc.getOrDefault("dob", ""));
-                    userDoc.append("entities", doc);
-                    userDoc.append("document_type", documentTypes);
+                    Object namedEntities = doc.get("named_entities");
+                    String name = null;
+                    if(namedEntities instanceof Map<?,?>){
+                        Map<?,?> temp = (Map<?,?>) namedEntities;
+                        name = (String) temp.get("Name");
+                    }
 
-                    userCollection.insertOne(userDoc);
+                    Document docModel = new Document();               
+                    docModel.append("name", name);
+                    docModel.append("document_type", documentTypes);
+                    docModel.append("entities", namedEntities);
+
+                    // inserting into document collection
+                    documentCollection.insertOne(docModel);
+                    // getting the generated cust_id in mongodb
+                    String cust_id = docModel.getObjectId("_id").toString(); // use this as foreign key
 
                     if (!documentTypes.isEmpty()) {
                         String type = documentTypes.get(0).toLowerCase();
                         MongoCollection<Document> typeCollection = db.getCollection(type);
 
                         Document typeDoc = new Document();
-                        typeDoc.append("cust_id", Integer.parseInt(empId));
                         typeDoc.append("name", name);
                         typeDoc.append("fileLink", driveLink);
+                        typeDoc.append("cust_id", cust_id);
 
                         typeCollection.insertOne(typeDoc);
                     }

@@ -86,7 +86,8 @@ Here are examples for different document types to guide your output:
   }
 ]
 
-For every receipt or document, generate the response in the same format and structure, maintaining consistency for the document_type field. Always ensure the JSON format is valid."""
+For every receipt or document, generate the response in the same format and structure, maintaining consistency for the document_type field. Always ensure the JSON format is valid.
+Important: Do NOT include any fields that are not listed in the examples above. Only output keys exactly matching those shown."""
 
 def pdf_to_images(file_stream, max_images=10):
     image_buffers = []
@@ -167,16 +168,60 @@ def convert_to_strict_json(response_content):
 
 def normalize_json_response(parsed_response):
     normalized = []
-    required_fields = ["document_type", "named_entities"]
+
+    # Fields expected per document type (based on your prompt)
+    expected_fields_by_type = {
+        "PAN Card": [
+            "Name",
+            "Date of Birth",
+            "Permanent Account Number"
+        ],
+        "Aadhaar Card": [
+            "Name",
+            "Aadhaar Number",
+            "Date of Birth",
+            "Gender",
+            "Address"
+        ],
+        "Credit Card": [
+            "Name",
+            "Card Number",
+            "Expiry Date",
+            "Bank Name"
+        ],
+        "Cheque": [
+            "Name",
+            "Account Number",
+            "Bank Name",
+            "IFSC Code",
+            "Cheque Number",
+            "Amount"
+        ]
+    }
+
     for entry in parsed_response:
-        normalized_entry = {key: entry.get(key, "") for key in required_fields}
-        if isinstance(normalized_entry["named_entities"], dict):
-            normalized_entry["named_entities"] = {
-                key: value for key, value in normalized_entry["named_entities"].items()
-            }
-        else:
-            normalized_entry["named_entities"] = {}
+        document_type = entry.get("document_type", "")
+        named_entities = entry.get("named_entities", {})
+
+        # Safeguard if named_entities is not a dict
+        if not isinstance(named_entities, dict):
+            named_entities = {}
+
+        # Filter only expected fields
+        filtered_entities = {}
+        if document_type in expected_fields_by_type:
+            allowed_keys = expected_fields_by_type[document_type]
+            for key in allowed_keys:
+                if key in named_entities:
+                    filtered_entities[key] = named_entities[key]
+
+        normalized_entry = {
+            "document_type": document_type,
+            "named_entities": filtered_entities
+        }
+
         normalized.append(normalized_entry)
+
     return normalized
 
 def process_pdf_with_gemini(file_stream, json_output_path=None):

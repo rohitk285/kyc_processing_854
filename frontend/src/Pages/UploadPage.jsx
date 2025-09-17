@@ -23,8 +23,6 @@ import ProcessIntelligence from "../assets/icon6.png";
 
 const UploadPage = () => {
   const [formData, setFormData] = useState({
-    employeeId: "",
-    pin: "",
     files: [],
   });
   const [loading, setLoading] = useState(false);
@@ -48,11 +46,8 @@ const UploadPage = () => {
     try {
       setLoading(true);
 
-      const formDataToSend = new FormData();
-      formDataToSend.append("employeeId", formData.employeeId);
-      formDataToSend.append("pin", formData.pin);
-
-      formDataToSend.append("file", formData.files[0]);
+  const formDataToSend = new FormData();
+  formDataToSend.append("file", formData.files[0]);
 
       const response = await fetch("http://localhost:8080/api/upload", {
         method: "POST",
@@ -81,8 +76,6 @@ const UploadPage = () => {
       }      
 
       setFormData({
-        employeeId: "",
-        pin: "",
         files: [],
       });
     } catch (error) {
@@ -154,35 +147,6 @@ const UploadPage = () => {
             Upload Details
           </Typography>
           <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Employee ID"
-                name="employeeId"
-                variant="outlined"
-                value={formData.employeeId}
-                onChange={handleChange}
-                sx={{
-                  backgroundColor: "#FFFFFF",
-                  borderRadius: 1,
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="PIN Number"
-                name="pin"
-                variant="outlined"
-                type="password"
-                value={formData.pin}
-                onChange={handleChange}
-                sx={{
-                  backgroundColor: "#FFFFFF",
-                  borderRadius: 1,
-                }}
-              />
-            </Grid>
             <Grid item xs={12} sx={{ display: "flex", alignItems: "center" }}>
               <Button
                 variant="outlined"
@@ -229,12 +193,19 @@ const UploadPage = () => {
                 variant="contained"
                 color="primary"
                 onClick={handleSubmit}
+                disabled={!formData.files || formData.files.length === 0}
                 sx={{
-                  backgroundColor: "#FF5722",
+                  backgroundColor: "#FE8D01",
                   padding: "10px 0",
                   fontWeight: "bold",
                   fontSize: "16px",
                   borderRadius: "30px",
+                  // keep visible when disabled but use lighter orange
+                  "&.Mui-disabled": {
+                    backgroundColor: "#FFB668",
+                    color: "#fff",
+                  },
+                  cursor: (!formData.files || formData.files.length === 0) ? 'not-allowed' : 'pointer'
                 }}
               >
                 Upload
