@@ -9,10 +9,11 @@ import java.util.Map;
 @Document(collection="document")
 public class DocumentModel {
     @Id
-    private String cust_id;
+    private String cust_id;  // mongo db automatically indexes this field since it is the _id
 
     @Indexed
     private String name;
+    
     private List<String> document_type;
     private Map<String, Object> entities;
 

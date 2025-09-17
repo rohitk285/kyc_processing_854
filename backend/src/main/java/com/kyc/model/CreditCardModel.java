@@ -7,10 +7,11 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document(collection="creditCard")
 public class CreditCardModel {
     @Id
-    private String id;
+    private String id; // automatically indexed as _id by mongo db
 
     @Indexed
     private String name;
+
     private String fileLink;
 
     private String cust_id; // foreign key reference to DocumentModel._id - creating a reference in mongodb

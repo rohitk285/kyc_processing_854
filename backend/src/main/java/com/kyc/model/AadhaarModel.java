@@ -7,10 +7,11 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document(collection="aadhaar")
 public class AadhaarModel {
     @Id
-    private String id;
+    private String id; // automatically indexed as _id by mongo db
 
     @Indexed
     private String name;
+
     private String fileLink;
 
     private String cust_id; // foreign key reference to DocumentModel - creating a reference in mongodb
