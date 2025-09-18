@@ -1,6 +1,7 @@
 package com.kyc.controller;
 
 import org.bson.Document;
+import org.checkerframework.checker.units.qual.t;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -12,6 +13,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.core.ParameterizedTypeReference;
 
+import org.springframework.beans.factory.annotation.Value;
 import com.kyc.util.GoogleDriveUploader;
 
 import java.io.ByteArrayInputStream;
@@ -21,8 +23,11 @@ import java.util.*;
 @RestController
 @RequestMapping("/api")
 public class UploadController {
-    @CrossOrigin(origins = "http://localhost:5173") // frontend localhost - not needed, can be removed
-    @PostMapping("/upload")
+
+    @Value("${spring.data.mongodb.uri}")
+    private String mongoUriString;
+
+    @PostMapping("/details")
     public ResponseEntity<?> handleUpload(
         @RequestParam("file") MultipartFile file) { // only one file as of now
         try {
@@ -62,7 +67,7 @@ public class UploadController {
 
             Map<String, Object> flaskData = flaskResponse.getBody();
 
-            // Extract and parse response
+            // parse response
             List<Map<String, Object>> extracted = new ArrayList<>();
             Object extractedObj = flaskData.get("extracted_data");
             if (extractedObj instanceof List<?>) {
@@ -78,7 +83,7 @@ public class UploadController {
             }
 
             // storing data in MongoDB
-            try (var mongoClient = MongoClients.create("mongodb://localhost:27017")) {
+            try (var mongoClient = MongoClients.create(mongoUriString)) {
                 MongoDatabase db = mongoClient.getDatabase("kyc_db");
                 MongoCollection<Document> documentCollection = db.getCollection("document");
 
@@ -111,7 +116,20 @@ public class UploadController {
                     String cust_id = docModel.getObjectId("_id").toString(); // use this as foreign key
 
                     if (!documentTypes.isEmpty()) {
-                        String type = documentTypes.get(0).toLowerCase();
+                        String tempType = documentTypes.get(0).toLowerCase();
+                        String type = tempType;
+                        switch(tempType){
+                            case "pan card":
+                                type = "pan";
+                                break;
+                            case "aadhaar card":
+                                type = "aadhaar";
+                                break;
+                            case "credit card":
+                                type = "creditcard";
+                                break;
+                        }
+
                         MongoCollection<Document> typeCollection = db.getCollection(type);
 
                         Document typeDoc = new Document();

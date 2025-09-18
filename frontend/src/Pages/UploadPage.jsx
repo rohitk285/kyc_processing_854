@@ -8,6 +8,8 @@ import {
   CircularProgress,
   Dialog,
   DialogContent,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import { CloudUpload, CheckCircle, Cancel } from "@mui/icons-material";
 import Slider from "react-slick";
@@ -24,7 +26,9 @@ import ProcessIntelligence from "../assets/icon6.png";
 const UploadPage = () => {
   const [formData, setFormData] = useState({
     files: [],
+    cust_id: "",
   });
+  const [customerType, setCustomerType] = useState("new");
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
   const [alert, setAlert] = useState({ open: false, success: false, message: "" });
@@ -42,14 +46,32 @@ const UploadPage = () => {
     });
   };
 
+  const handleCustomerType = (event, newType) => {
+    if (newType !== null) setCustomerType(newType);
+  };
+
   const handleSubmit = async () => {
     try {
       setLoading(true);
 
-  const formDataToSend = new FormData();
-  formDataToSend.append("file", formData.files[0]);
+      // validate customer id when existing customer selected
+      if (customerType === 'existing') {
+        if (!formData.cust_id || formData.cust_id.trim() === '') {
+          setAlert({ open: true, success: false, message: 'Please enter Customer ID for existing customer' });
+          setTimeout(() => setAlert({ open: false, success: false, message: '' }), 3000);
+          return;
+        }
+      }
 
-      const response = await fetch("http://localhost:8080/api/upload", {
+      const formDataToSend = new FormData();
+      formDataToSend.append("file", formData.files[0]);
+      if (customerType === 'existing') formDataToSend.append('cust_id', formData.cust_id);
+
+      const endpoint = customerType === "new"
+        ? "http://localhost:8080/api/details"
+        : "http://localhost:8080/api/existingCustomer";
+
+      const response = await fetch(endpoint, {
         method: "POST",
         body: formDataToSend,
       });
@@ -147,6 +169,84 @@ const UploadPage = () => {
             Upload Details
           </Typography>
           <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <ToggleButtonGroup
+                value={customerType}
+                exclusive
+                onChange={handleCustomerType}
+                aria-label="customer-type"
+                sx={{
+                  mb: 1,
+                  display: 'flex',
+                  gap: 1,
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  padding: '6px',
+                  borderRadius: '10px',
+                  transition: 'background-color 220ms ease'
+                }}
+              >
+                <ToggleButton
+                  value="new"
+                  aria-label="new-customer"
+                  sx={{
+                    px: 3,
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    transition: 'background-color 220ms ease, transform 160ms ease, box-shadow 220ms ease',
+                    '&.Mui-selected, &.Mui-selected:hover, &.Mui-selected:active': {
+                      backgroundColor: '#FE8D01',
+                      color: '#fff',
+                      transform: 'translateY(-3px) scale(1.02)',
+                      boxShadow: '0 8px 20px rgba(254,141,1,0.18)'
+                    },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.06)',
+                      transform: 'translateY(-1px)'
+                    }
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 'bold', color: 'inherit' }}>New Customer</Typography>
+                </ToggleButton>
+                <ToggleButton
+                  value="existing"
+                  aria-label="existing-customer"
+                  sx={{
+                    px: 3,
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    transition: 'background-color 220ms ease, transform 160ms ease, box-shadow 220ms ease',
+                    '&.Mui-selected, &.Mui-selected:hover, &.Mui-selected:active': {
+                      backgroundColor: '#FE8D01',
+                      color: '#fff',
+                      transform: 'translateY(-3px) scale(1.02)',
+                      boxShadow: '0 8px 20px rgba(254,141,1,0.18)'
+                    },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.06)',
+                      transform: 'translateY(-1px)'
+                    }
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 'bold', color: 'inherit' }}>Existing Customer</Typography>
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Grid>
+            {customerType === 'existing' && (
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Customer ID"
+                  name="cust_id"
+                  variant="outlined"
+                  value={formData.cust_id}
+                  onChange={handleChange}
+                  sx={{
+                    backgroundColor: "#FFFFFF",
+                    borderRadius: 1,
+                  }}
+                />
+              </Grid>
+            )}
             <Grid item xs={12} sx={{ display: "flex", alignItems: "center" }}>
               <Button
                 variant="outlined"
