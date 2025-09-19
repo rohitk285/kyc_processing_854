@@ -1,7 +1,6 @@
 package com.kyc.controller;
 
 import org.bson.Document;
-import org.checkerframework.checker.units.qual.t;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -11,6 +10,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.LinkedMultiValueMap;
+import org.bson.types.ObjectId;
 import org.springframework.core.ParameterizedTypeReference;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -105,15 +105,20 @@ public class UploadController {
                         name = (String) temp.get("Name");
                     }
 
-                    Document docModel = new Document();               
+                    Document docModel = new Document();
+                    ObjectId objectId = new ObjectId();
+
+                    // use this as foreign key in aadhaar, pan, creditcard, cheque collections
+                    String cust_id = objectId.toString();
+
+                    docModel.append("_id", objectId);
+                    docModel.append("cust_id", cust_id);               
                     docModel.append("name", name);
                     docModel.append("document_type", documentTypes);
                     docModel.append("entities", namedEntities);
 
                     // inserting into document collection
                     documentCollection.insertOne(docModel);
-                    // getting the generated cust_id in mongodb
-                    String cust_id = docModel.getObjectId("_id").toString(); // use this as foreign key
 
                     if (!documentTypes.isEmpty()) {
                         String tempType = documentTypes.get(0).toLowerCase();

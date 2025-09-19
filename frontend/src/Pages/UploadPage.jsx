@@ -10,6 +10,7 @@ import {
   DialogContent,
   ToggleButton,
   ToggleButtonGroup,
+  Autocomplete,
 } from "@mui/material";
 import { CloudUpload, CheckCircle, Cancel } from "@mui/icons-material";
 import Slider from "react-slick";
@@ -29,6 +30,9 @@ const UploadPage = () => {
     cust_id: "",
   });
   const [customerType, setCustomerType] = useState("new");
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [suggestionsTimer, setSuggestionsTimer] = useState(null);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
   const [alert, setAlert] = useState({ open: false, success: false, message: "" });
@@ -48,6 +52,45 @@ const UploadPage = () => {
 
   const handleCustomerType = (event, newType) => {
     if (newType !== null) setCustomerType(newType);
+  };
+
+  const fetchSuggestions = async (q) => {
+    if (!q || q.trim() === "") {
+      setSuggestions([]);
+      return;
+    }
+    setLoadingSuggestions(true);
+    try {
+      const res = await fetch(`http://localhost:8080/api/custID/${encodeURIComponent(q)}`);
+      if (!res.ok) {
+        setSuggestions([]);
+      } else {
+        const data = await res.json();
+        // backend returns array of JSON strings; parse each and extract id and name
+        const opts = [];
+        for (const item of data) {
+          try {
+            const parsed = typeof item === 'string' ? JSON.parse(item) : item;
+            let id = null;
+            if (parsed._id) {
+              if (typeof parsed._id === 'string') id = parsed._id;
+              else if (parsed._id.$oid) id = parsed._id.$oid;
+            }
+            // fallback keys
+            if (!id && parsed.cust_id) id = parsed.cust_id;
+            const name = parsed.name || parsed.Name || '';
+            if (id) opts.push({ cust_id: id, name });
+          } catch (e) {
+            // ignore parse errors
+          }
+        }
+        setSuggestions(opts);
+      }
+    } catch (e) {
+      setSuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -99,6 +142,7 @@ const UploadPage = () => {
 
       setFormData({
         files: [],
+        cust_id: "",
       });
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -233,17 +277,70 @@ const UploadPage = () => {
             </Grid>
             {customerType === 'existing' && (
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Customer ID"
-                  name="cust_id"
-                  variant="outlined"
-                  value={formData.cust_id}
-                  onChange={handleChange}
-                  sx={{
-                    backgroundColor: "#FFFFFF",
-                    borderRadius: 1,
+                <Autocomplete
+                  freeSolo
+                  options={suggestions || []}
+                  // When showing options in the dropdown, we want to show only cust_id in the input when selected.
+                  getOptionLabel={(option) => {
+                    // option can be a string when freeSolo or an object from suggestions
+                    if (!option) return '';
+                    if (typeof option === 'string') return option;
+                    return option.cust_id || '';
                   }}
+                  filterOptions={(x) => x}
+                  inputValue={formData.cust_id}
+                  onInputChange={(e, newInput, reason) => {
+                    // update form value for both typing and clearing
+                    if (reason === 'reset') return; // ignore reset events triggered by selection
+                    setFormData({ ...formData, cust_id: newInput });
+
+                    // debounce suggestions
+                    if (suggestionsTimer) clearTimeout(suggestionsTimer);
+                    const t = setTimeout(() => fetchSuggestions(newInput), 350);
+                    setSuggestionsTimer(t);
+                  }}
+                  onChange={(e, newVal) => {
+                    // when an option object is selected, set only the cust_id into the input
+                    if (!newVal) {
+                      setFormData({ ...formData, cust_id: '' });
+                      return;
+                    }
+                    if (typeof newVal === 'string') {
+                      setFormData({ ...formData, cust_id: newVal });
+                    } else if (newVal.cust_id) {
+                      setFormData({ ...formData, cust_id: newVal.cust_id });
+                    }
+                  }}
+                  loading={loadingSuggestions}
+                  renderOption={(props, option) => {
+                    // option may be a string or object
+                    const custId = typeof option === 'string' ? option : option.cust_id || '';
+                    const name = typeof option === 'string' ? '' : option.name || '';
+                    return (
+                      <li {...props} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                        <span style={{ fontWeight: 600 }}>{custId}</span>
+                        <span style={{ fontSize: 12, color: '#666' }}>{name}</span>
+                      </li>
+                    );
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Customer ID"
+                      variant="outlined"
+                      fullWidth
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingSuggestions ? <CircularProgress color="inherit" size={20} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        ),
+                      }}
+                      sx={{ backgroundColor: "#FFFFFF", borderRadius: 1 }}
+                    />
+                  )}
                 />
               </Grid>
             )}
