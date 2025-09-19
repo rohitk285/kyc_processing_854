@@ -31,7 +31,11 @@ public class SearchByName {
                     Pattern pattern = Pattern.compile(name, Pattern.CASE_INSENSITIVE);
                     Document query = new Document("name", pattern);
 
-                    FindIterable<Document> result = collection.find(query);
+                    Document projection = new Document("name", 1)
+                            .append("cust_id", 1)
+                            .append("_id", 0);
+
+                    FindIterable<Document> result = collection.find(query).projection(projection);
                     List<String> returnList = new ArrayList<>();
                     for(Document doc : result) {
                         returnList.add(doc.toJson());

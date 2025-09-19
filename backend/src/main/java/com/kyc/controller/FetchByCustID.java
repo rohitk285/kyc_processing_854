@@ -8,40 +8,27 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.springframework.beans.factory.annotation.Value;
-import java.util.regex.Pattern;
-import com.mongodb.client.FindIterable;
-
-import java.util.*;
 
 @RestController
 @RequestMapping("/api")
-public class SearchByCustID {
+public class FetchByCustID {
     
     @Value("${spring.data.mongodb.uri}")
     private String mongoUriString;
 
-    @GetMapping("/custID/{cust_id}")
-    public ResponseEntity<?> getCustomerById(
+    @GetMapping("/customerDetailsCustID/{cust_id}")
+    public ResponseEntity<?> getCustomerDetailsById(
         @PathVariable("cust_id") String custId) {
             try {
                 try (var mongoClient = MongoClients.create(mongoUriString)) {
                     MongoDatabase database = mongoClient.getDatabase("kyc_db");
                     MongoCollection<Document> collection = database.getCollection("document");
 
-                    Pattern pattern = Pattern.compile(custId, Pattern.CASE_INSENSITIVE);
-                    Document query = new Document("cust_id", pattern);
+                    // fetching details of customer with cust_id
+                    Document query = new Document("cust_id", custId);
+                    Document result = collection.find(query).first();
 
-                    Document projection = new Document("name", 1)
-                            .append("cust_id", 1)
-                            .append("_id", 0);
-
-                    FindIterable<Document> result = collection.find(query). projection(projection);
-                    List<String> returnList = new ArrayList<>();
-                    for(Document doc : result) {
-                        returnList.add(doc.toJson());
-                    }
-
-                    return ResponseEntity.ok(returnList);
+                    return ResponseEntity.ok(result);
                 }
             } catch (Exception e) {
                 e.printStackTrace();

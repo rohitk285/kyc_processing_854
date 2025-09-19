@@ -9,33 +9,45 @@ import {
 } from "@mui/material";
 import Navbar from "../components/Navbar";
 import axios from "axios";
-import { useNavigate } from "react-router-dom"; // Import useNavigate instead of useHistory
+import { useNavigate } from "react-router-dom";
 
 const EntryPage = () => {
   const [formData, setFormData] = useState({ name: "", dob: "" });
   const [filteredResults, setFilteredResults] = useState([]);
-  const navigate = useNavigate(); // Use useNavigate for navigation
+  const navigate = useNavigate();
 
   const handleChange = async (e) => {
     const { name, value } = e.target;
     const newFormData = { ...formData, [name]: value };
     setFormData(newFormData);
 
+    if (!newFormData.name || newFormData.name.trim() === "") {
+      setFilteredResults([]);
+      return;
+    }
+
     try {
-      const response = await axios.get("http://localhost:3000/getUserDetails", {
-        params: { name: newFormData.name },
-      });
-      
+      const encoded = encodeURIComponent(newFormData.name.trim());
+      const response = await axios.get(`http://localhost:8080/api/name/${encoded}`);
+
       if (response.status === 200) {
-        setFilteredResults(response.data.data); // Update filtered results with the user data
+        // ✅ Parse each JSON string in the response
+        const results = (response.data ?? []).map((str) => {
+          try {
+            return JSON.parse(str);
+          } catch (e) {
+            return null;
+          }
+        }).filter(Boolean); // Remove nulls from parse errors
+
+        setFilteredResults(results);
       }
     } catch (error) {
-      setFilteredResults([]); // Clear results if no match
+      setFilteredResults([]);
     }
   };
 
   const handleUserClick = (user) => {
-    // Navigate to the details page and pass the selected user data
     navigate("/user-details", { state: { userData: user } });
   };
 
@@ -105,35 +117,43 @@ const EntryPage = () => {
           >
             Results
           </Typography>
+
           {filteredResults.length > 0 ? (
-            filteredResults.map((user, index) => (
-              <Card
-                key={index}
-                sx={{
-                  marginBottom: 2,
-                  borderRadius: "8px",
-                  backgroundColor: "#FF5722",
-                  boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
-                  color: "#FFFFFF",
-                  ":hover": {
-                    backgroundColor: "#FFFFFF",
-                    color: "#000000",
-                    transition: "background-color 0.3s, color 0.3s",
-                  },
-                  cursor: "pointer",
-                }}
-                onClick={() => handleUserClick(user)}
-              >
-                <CardContent>
-                  <Typography
-                    variant="h6"
-                    sx={{ fontWeight: "bold", fontFamily: "MerriWeather" }}
-                  >
-                    {user.name}
-                  </Typography>
-                </CardContent>
-              </Card>
-            ))
+            filteredResults.map((user, index) => {
+              const entities = user.entities || {};
+              const documentType = Array.isArray(user.document_type)
+                ? user.document_type.join(", ")
+                : user.document_type;
+
+              return (
+                <Card
+                  key={index}
+                  sx={{
+                    marginBottom: 2,
+                    borderRadius: "8px",
+                    backgroundColor: "#FF5722",
+                    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+                    color: "#FFFFFF",
+                    ":hover": {
+                      backgroundColor: "#FFFFFF",
+                      color: "#000000",
+                      transition: "background-color 0.3s, color 0.3s",
+                    },
+                    cursor: "pointer",
+                  }}
+                  onClick={() => handleUserClick(user)}
+                >
+                  <CardContent>
+                    <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                      {user.name}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      Customer ID: {user.cust_id}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              );
+            })
           ) : (
             <Typography variant="body1" sx={{ color: "#FFFFFF" }}>
               No results found.
