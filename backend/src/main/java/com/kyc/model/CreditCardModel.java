@@ -10,10 +10,11 @@ public class CreditCardModel {
     private String id; // automatically indexed as _id by mongo db
 
     @Indexed
-    private String name;
+    private String name;  // remove if not needed
 
     private String fileLink;
 
+    @Indexed
     private String cust_id; // foreign key reference to DocumentModel._id - creating a reference in mongodb
 
     public CreditCardModel() {}

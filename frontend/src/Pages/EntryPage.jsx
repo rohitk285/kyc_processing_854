@@ -47,8 +47,8 @@ const EntryPage = () => {
     }
   };
 
-  const handleUserClick = (user) => {
-    navigate("/user-details", { state: { userData: user } });
+  const handleUserClick = (cust_id) => {
+    navigate("/user-details", { state: { userData: cust_id } });
   };
 
   return (
@@ -141,7 +141,7 @@ const EntryPage = () => {
                     },
                     cursor: "pointer",
                   }}
-                  onClick={() => handleUserClick(user)}
+                  onClick={() => handleUserClick(user.cust_id)}
                 >
                   <CardContent>
                     <Typography variant="h6" sx={{ fontWeight: "bold" }}>

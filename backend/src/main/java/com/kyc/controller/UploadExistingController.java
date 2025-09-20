@@ -29,7 +29,7 @@ public class UploadExistingController {
 
     @PostMapping("/existingCustomer")
     public ResponseEntity<?> handleExistingCustomer(
-            @RequestParam(value = "cust_id", required = false) String custId,
+            @RequestParam(value = "cust_id", required = true) String custId,
             @RequestParam("file") MultipartFile file) { // one file only
         try {
             // Read file bytes once

@@ -12,26 +12,53 @@ import {
 } from "@mui/material";
 import { useLocation } from "react-router-dom"; // To retrieve data passed through the router
 import axios from "axios";
+import { use } from "react";
 
 const UserDetailsPage = () => {
-  const location = useLocation(); // Get the state passed from EntryPage
-  const user = location.state?.userData; // Retrieve user data
+  const location = useLocation();
+  const cust_id = location.state?.userData;
+  const [user, setUser] = useState(null);
   const [links, setLinks] = useState([]);
+
+  async function getUserDetails() {
+    try {
+      const response = await axios.get(
+        "http://localhost:8080/api/customerDetailsCustID",
+        {
+          params: { cust_id: cust_id },
+        }
+      );
+      setUser(response.data);
+    } catch (err) {
+      console.error("Cannot fetch user details", err);
+    }
+  }
 
   async function getLinks() {
     try {
-      const response = await axios.get("http://localhost:3000/getLinks", {
-        params: { name: user.name },
-      });
+      const response = await axios.post(
+        "http://localhost:8080/api/customerDetailsLinks",
+        {
+          cust_id: cust_id,
+          document_type: user.document_type,
+        }
+      );
+      console.log("Links response:", response.data);
       setLinks(response.data);
     } catch (err) {
-      console.error("Cannot fetch links", err);
+      console.error("Cannot fetch user links", err);
     }
   }
 
   useEffect(() => {
-    getLinks();
+    getUserDetails();
   }, []);
+
+  useEffect(() => {
+    if (user && user.document_type) {
+      getLinks();
+    }
+  }, [user]);
 
   if (!user) {
     return (
@@ -45,7 +72,12 @@ const UserDetailsPage = () => {
     <Box sx={{ padding: 4, backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
       <Typography
         variant="h4"
-        sx={{ fontWeight: "bold", marginBottom: 4, color: "#111810", fontFamily: "Oswald" }}
+        sx={{
+          fontWeight: "bold",
+          marginBottom: 4,
+          color: "#111810",
+          fontFamily: "Oswald",
+        }}
       >
         User Details
       </Typography>
@@ -60,9 +92,9 @@ const UserDetailsPage = () => {
         <CardContent>
           <Grid container spacing={3}>
             {/* Named Entities */}
-            {user.named_entities && (
+            {user.entities && (
               <>
-                {Object.keys(user.named_entities).map((entityKey, index) => (
+                {Object.keys(user.entities).map((entityKey, index) => (
                   <Grid
                     item
                     xs={12}
@@ -84,7 +116,7 @@ const UserDetailsPage = () => {
                       >
                         {entityKey}:
                       </Typography>
-                      {Array.isArray(user.named_entities[entityKey]) ? (
+                      {Array.isArray(user.entities[entityKey]) ? (
                         <List
                           sx={{
                             backgroundColor: "#eeeeee",
@@ -92,7 +124,7 @@ const UserDetailsPage = () => {
                             borderRadius: "8px",
                           }}
                         >
-                          {user.named_entities[entityKey].map((item, index) => (
+                          {user.entities[entityKey].map((item, index) => (
                             <ListItem key={index}>
                               <ListItemText
                                 primary={item}
@@ -106,9 +138,14 @@ const UserDetailsPage = () => {
                       ) : (
                         <Typography
                           variant="body1"
-                          sx={{ fontWeight: "bold", color: "#000000", fontFamily: "Nunito", fontSize: "20px" }}
+                          sx={{
+                            fontWeight: "bold",
+                            color: "#000000",
+                            fontFamily: "Nunito",
+                            fontSize: "20px",
+                          }}
                         >
-                          {user.named_entities[entityKey]}
+                          {user.entities[entityKey]}
                         </Typography>
                       )}
                     </Box>
@@ -126,41 +163,37 @@ const UserDetailsPage = () => {
                 >
                   Related Documents:
                 </Typography>
-                <List
-                  sx={{
-                    backgroundColor: "#eeeeee",
-                    padding: "10px",
-                    borderRadius: "8px",
-                  }}
-                >
-                  {links.map((doc, index) => (
-                    <ListItem key={index}>
-                      <ListItemText
-                        primary={doc.document}
-                        primaryTypographyProps={{
-                          sx: { fontWeight: "bold", color: "#000000", fontFamily: "Merriweather" },
-                        }}
-                        secondary={
-                          doc.link ? (
-                            <Link
-                              href={doc.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              sx={{
-                                color: "#FF5722",
-                                fontWeight: "bold",
-                                textDecoration: "underline",
-                              }}
-                            >
-                              Click here to view
-                            </Link>
-                          ) : (
-                            "No document available"
-                          )
-                        }
-                      />
-                    </ListItem>
-                  ))}
+                <List>
+                  {links.map((docObj, index) => {
+                    const docType = Object.keys(docObj)[0];
+                    const docInfo = docObj[docType];
+
+                    return (
+                      <ListItem key={index}>
+                        <ListItemText
+                          primary={docType}
+                          secondary={
+                            docInfo?.fileLink ? (
+                              <Link
+                                href={docInfo.fileLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{
+                                  color: "#FF5722",
+                                  fontWeight: "bold",
+                                  textDecoration: "underline",
+                                }}
+                              >
+                                Click here to view
+                              </Link>
+                            ) : (
+                              "No document available"
+                            )
+                          }
+                        />
+                      </ListItem>
+                    );
+                  })}
                 </List>
               </Grid>
             )}

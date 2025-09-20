@@ -16,9 +16,9 @@ public class FetchByCustID {
     @Value("${spring.data.mongodb.uri}")
     private String mongoUriString;
 
-    @GetMapping("/customerDetailsCustID/{cust_id}")
+    @GetMapping("/customerDetailsCustID")
     public ResponseEntity<?> getCustomerDetailsById(
-        @PathVariable("cust_id") String custId) {
+        @RequestParam("cust_id") String custId) {
             try {
                 try (var mongoClient = MongoClients.create(mongoUriString)) {
                     MongoDatabase database = mongoClient.getDatabase("kyc_db");
