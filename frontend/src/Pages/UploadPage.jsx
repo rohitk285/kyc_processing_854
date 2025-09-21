@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react"; 
+import React, { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -25,6 +26,7 @@ import AIPowered from "../assets/icon5.jpg";
 import ProcessIntelligence from "../assets/icon6.png";
 
 const UploadPage = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     files: [],
     cust_id: "",
@@ -35,7 +37,11 @@ const UploadPage = () => {
   const [suggestionsTimer, setSuggestionsTimer] = useState(null);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
-  const [alert, setAlert] = useState({ open: false, success: false, message: "" });
+  const [alert, setAlert] = useState({
+    open: false,
+    success: false,
+    message: "",
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -61,7 +67,9 @@ const UploadPage = () => {
     }
     setLoadingSuggestions(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/custID/${encodeURIComponent(q)}`);
+      const res = await fetch(
+        `http://localhost:8080/api/custID/${encodeURIComponent(q)}`
+      );
       if (!res.ok) {
         setSuggestions([]);
       } else {
@@ -70,15 +78,15 @@ const UploadPage = () => {
         const opts = [];
         for (const item of data) {
           try {
-            const parsed = typeof item === 'string' ? JSON.parse(item) : item;
+            const parsed = typeof item === "string" ? JSON.parse(item) : item;
             let id = null;
             if (parsed._id) {
-              if (typeof parsed._id === 'string') id = parsed._id;
+              if (typeof parsed._id === "string") id = parsed._id;
               else if (parsed._id.$oid) id = parsed._id.$oid;
             }
             // fallback keys
             if (!id && parsed.cust_id) id = parsed.cust_id;
-            const name = parsed.name || parsed.Name || '';
+            const name = parsed.name || parsed.Name || "";
             if (id) opts.push({ cust_id: id, name });
           } catch (e) {
             // ignore parse errors
@@ -97,22 +105,32 @@ const UploadPage = () => {
     try {
       setLoading(true);
 
-      // validate customer id when existing customer selected
-      if (customerType === 'existing') {
-        if (!formData.cust_id || formData.cust_id.trim() === '') {
-          setAlert({ open: true, success: false, message: 'Please enter Customer ID for existing customer' });
-          setTimeout(() => setAlert({ open: false, success: false, message: '' }), 3000);
-          return;
-        }
+      // validation for existing customer
+      if (customerType === "existing" && !formData.cust_id.trim()) {
+        setAlert({
+          open: true,
+          success: false,
+          message: "Please enter Customer ID",
+        });
+        setTimeout(
+          () => setAlert({ open: false, success: false, message: "" }),
+          3000
+        );
+        return;
       }
 
       const formDataToSend = new FormData();
-      formDataToSend.append("file", formData.files[0]);
-      if (customerType === 'existing') formDataToSend.append('cust_id', formData.cust_id);
+      formData.files.forEach((file) => {
+        formDataToSend.append("file", file);
+      });
+      if (customerType === "existing") {
+        formDataToSend.append("cust_id", formData.cust_id);
+      }
 
-      const endpoint = customerType === "new"
-        ? "http://localhost:8080/api/details"
-        : "http://localhost:8080/api/existingCustomer";
+      const endpoint =
+        customerType === "new"
+          ? "http://localhost:8080/api/details"
+          : "http://localhost:8080/api/existingCustomer";
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -120,47 +138,28 @@ const UploadPage = () => {
       });
 
       const result = await response.json();
+      console.log(result.data);
       if (response.ok) {
-        setAlert({
-          open: true,
-          success: true,
-          message: "Successfully Processed",
+        navigate("/confirm-details", {
+          state: { extractedData: result.data },
         });
-        setTimeout(() => {
-          setAlert({ open: false, success: false, message: "" });
-        }, 3000);
       } else {
         setAlert({
           open: true,
           success: false,
-          message: result.error || "An error occurred.",
+          message: result.message || "Something went wrong.",
         });
-        setTimeout(() => {
-          setAlert({ open: false, success: false, message: "" });
-        }, 3000);
-      }      
-
-      setFormData({
-        files: [],
-        cust_id: "",
-      });
+      }
     } catch (error) {
-      console.error("Error submitting form:", error);
-      setAlert({
-        open: true,
-        success: false,
-        message: "An error occurred while submitting the form.",
-      });
+      console.error("Upload error:", error);
+      setAlert({ open: true, success: false, message: "Server Error" });
     } finally {
       setLoading(false);
-      if(fileInputRef.current){
-        fileInputRef.current.value = "";
-      }
     }
   };
 
   const handleCloseAlert = () => {
-    setAlert({ open: false, success: false, message: "" });;
+    setAlert({ open: false, success: false, message: "" });
   };
 
   const carouselSettings = {
@@ -221,12 +220,12 @@ const UploadPage = () => {
                 aria-label="customer-type"
                 sx={{
                   mb: 1,
-                  display: 'flex',
+                  display: "flex",
                   gap: 1,
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  padding: '6px',
-                  borderRadius: '10px',
-                  transition: 'background-color 220ms ease'
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  padding: "6px",
+                  borderRadius: "10px",
+                  transition: "background-color 220ms ease",
                 }}
               >
                 <ToggleButton
@@ -234,48 +233,56 @@ const UploadPage = () => {
                   aria-label="new-customer"
                   sx={{
                     px: 3,
-                    color: '#FFFFFF',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    transition: 'background-color 220ms ease, transform 160ms ease, box-shadow 220ms ease',
-                    '&.Mui-selected, &.Mui-selected:hover, &.Mui-selected:active': {
-                      backgroundColor: '#FE8D01',
-                      color: '#fff',
-                      transform: 'translateY(-3px) scale(1.02)',
-                      boxShadow: '0 8px 20px rgba(254,141,1,0.18)'
+                    color: "#FFFFFF",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    transition:
+                      "background-color 220ms ease, transform 160ms ease, box-shadow 220ms ease",
+                    "&.Mui-selected, &.Mui-selected:hover, &.Mui-selected:active":
+                      {
+                        backgroundColor: "#FE8D01",
+                        color: "#fff",
+                        transform: "translateY(-3px) scale(1.02)",
+                        boxShadow: "0 8px 20px rgba(254,141,1,0.18)",
+                      },
+                    "&:hover": {
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      transform: "translateY(-1px)",
                     },
-                    '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.06)',
-                      transform: 'translateY(-1px)'
-                    }
                   }}
                 >
-                  <Typography sx={{ fontWeight: 'bold', color: 'inherit' }}>New Customer</Typography>
+                  <Typography sx={{ fontWeight: "bold", color: "inherit" }}>
+                    New Customer
+                  </Typography>
                 </ToggleButton>
                 <ToggleButton
                   value="existing"
                   aria-label="existing-customer"
                   sx={{
                     px: 3,
-                    color: '#FFFFFF',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    transition: 'background-color 220ms ease, transform 160ms ease, box-shadow 220ms ease',
-                    '&.Mui-selected, &.Mui-selected:hover, &.Mui-selected:active': {
-                      backgroundColor: '#FE8D01',
-                      color: '#fff',
-                      transform: 'translateY(-3px) scale(1.02)',
-                      boxShadow: '0 8px 20px rgba(254,141,1,0.18)'
+                    color: "#FFFFFF",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    transition:
+                      "background-color 220ms ease, transform 160ms ease, box-shadow 220ms ease",
+                    "&.Mui-selected, &.Mui-selected:hover, &.Mui-selected:active":
+                      {
+                        backgroundColor: "#FE8D01",
+                        color: "#fff",
+                        transform: "translateY(-3px) scale(1.02)",
+                        boxShadow: "0 8px 20px rgba(254,141,1,0.18)",
+                      },
+                    "&:hover": {
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      transform: "translateY(-1px)",
                     },
-                    '&:hover': {
-                      backgroundColor: 'rgba(255,255,255,0.06)',
-                      transform: 'translateY(-1px)'
-                    }
                   }}
                 >
-                  <Typography sx={{ fontWeight: 'bold', color: 'inherit' }}>Existing Customer</Typography>
+                  <Typography sx={{ fontWeight: "bold", color: "inherit" }}>
+                    Existing Customer
+                  </Typography>
                 </ToggleButton>
               </ToggleButtonGroup>
             </Grid>
-            {customerType === 'existing' && (
+            {customerType === "existing" && (
               <Grid item xs={12}>
                 <Autocomplete
                   freeSolo
@@ -283,15 +290,15 @@ const UploadPage = () => {
                   // When showing options in the dropdown, we want to show only cust_id in the input when selected.
                   getOptionLabel={(option) => {
                     // option can be a string when freeSolo or an object from suggestions
-                    if (!option) return '';
-                    if (typeof option === 'string') return option;
-                    return option.cust_id || '';
+                    if (!option) return "";
+                    if (typeof option === "string") return option;
+                    return option.cust_id || "";
                   }}
                   filterOptions={(x) => x}
                   inputValue={formData.cust_id}
                   onInputChange={(e, newInput, reason) => {
                     // update form value for both typing and clearing
-                    if (reason === 'reset') return; // ignore reset events triggered by selection
+                    if (reason === "reset") return; // ignore reset events triggered by selection
                     setFormData({ ...formData, cust_id: newInput });
 
                     // debounce suggestions
@@ -302,10 +309,10 @@ const UploadPage = () => {
                   onChange={(e, newVal) => {
                     // when an option object is selected, set only the cust_id into the input
                     if (!newVal) {
-                      setFormData({ ...formData, cust_id: '' });
+                      setFormData({ ...formData, cust_id: "" });
                       return;
                     }
-                    if (typeof newVal === 'string') {
+                    if (typeof newVal === "string") {
                       setFormData({ ...formData, cust_id: newVal });
                     } else if (newVal.cust_id) {
                       setFormData({ ...formData, cust_id: newVal.cust_id });
@@ -314,12 +321,25 @@ const UploadPage = () => {
                   loading={loadingSuggestions}
                   renderOption={(props, option) => {
                     // option may be a string or object
-                    const custId = typeof option === 'string' ? option : option.cust_id || '';
-                    const name = typeof option === 'string' ? '' : option.name || '';
+                    const custId =
+                      typeof option === "string"
+                        ? option
+                        : option.cust_id || "";
+                    const name =
+                      typeof option === "string" ? "" : option.name || "";
                     return (
-                      <li {...props} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                      <li
+                        {...props}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "flex-start",
+                        }}
+                      >
                         <span style={{ fontWeight: 600 }}>{custId}</span>
-                        <span style={{ fontSize: 12, color: '#666' }}>{name}</span>
+                        <span style={{ fontSize: 12, color: "#666" }}>
+                          {name}
+                        </span>
                       </li>
                     );
                   }}
@@ -333,7 +353,9 @@ const UploadPage = () => {
                         ...params.InputProps,
                         endAdornment: (
                           <>
-                            {loadingSuggestions ? <CircularProgress color="inherit" size={20} /> : null}
+                            {loadingSuggestions ? (
+                              <CircularProgress color="inherit" size={20} />
+                            ) : null}
                             {params.InputProps.endAdornment}
                           </>
                         ),
@@ -402,7 +424,10 @@ const UploadPage = () => {
                     backgroundColor: "#FFB668",
                     color: "#fff",
                   },
-                  cursor: (!formData.files || formData.files.length === 0) ? 'not-allowed' : 'pointer'
+                  cursor:
+                    !formData.files || formData.files.length === 0
+                      ? "not-allowed"
+                      : "pointer",
                 }}
               >
                 Upload

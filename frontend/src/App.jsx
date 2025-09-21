@@ -7,6 +7,7 @@ import UserDetailsPage from "./Pages/UserDetailsPage";
 import SettingsPage from "./Pages/SettingsPage";
 import RetrievalPageDoc from "./Pages/RetrievalPageDoc";
 import RetrievalPageDate from "./Pages/RetrievalPageDate";
+import ConfirmDetailsPage from "./Pages/ConfirmDetailsPage";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/retrievedoc" element={<RetrievalPageDoc />} />
             <Route path="/retrievedate" element={<RetrievalPageDate />} />
+            <Route path="/confirm-details" element={<ConfirmDetailsPage />}/>
           </Routes>
       </BrowserRouter>
     </div>

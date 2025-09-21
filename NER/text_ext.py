@@ -39,7 +39,8 @@ Here are examples for different document types to guide your output:
     "named_entities": {
       "Name": "Ram Agya Prasad",
       "Date of Birth": "24/01/1991",
-      "Permanent Account Number": "CXRPK9829B"
+      "Permanent Account Number": "CXRPK9829B",
+      "Address": "House No. 123, Sector 9, Gurgaon, Haryana - 122001"
     }
   }
 ]
@@ -169,12 +170,13 @@ def convert_to_strict_json(response_content):
 def normalize_json_response(parsed_response):
     normalized = []
 
-    # Fields expected per document type (based on your prompt)
+    # Fields expected per document type
     expected_fields_by_type = {
         "PAN Card": [
             "Name",
             "Date of Birth",
-            "Permanent Account Number"
+            "Permanent Account Number",
+            "Address"  # include if you want to prefix
         ],
         "Aadhaar Card": [
             "Name",
@@ -203,7 +205,6 @@ def normalize_json_response(parsed_response):
         document_type = entry.get("document_type", "")
         named_entities = entry.get("named_entities", {})
 
-        # Safeguard if named_entities is not a dict
         if not isinstance(named_entities, dict):
             named_entities = {}
 
@@ -213,7 +214,11 @@ def normalize_json_response(parsed_response):
             allowed_keys = expected_fields_by_type[document_type]
             for key in allowed_keys:
                 if key in named_entities:
-                    filtered_entities[key] = named_entities[key]
+                    # Prefix Address with document type
+                    if key.lower() == "address":
+                        filtered_entities[f"{document_type} {key}"] = named_entities[key]
+                    else:
+                        filtered_entities[key] = named_entities[key]
 
         normalized_entry = {
             "document_type": document_type,
