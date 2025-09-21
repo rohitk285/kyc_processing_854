@@ -54,6 +54,7 @@ const ConfirmDetailsPage = () => {
         success: false,
         message:
           '"Name" field has inconsistent values across documents. Please review before saving!',
+        type: "inconsistency"
       });
     }
   }, [documents]);
@@ -78,7 +79,7 @@ const ConfirmDetailsPage = () => {
 
   const handleAddField = () => {
     if (!newFieldKey.trim()) {
-      setResultModal({ open: true, success: false, message: "Field name cannot be empty!" });
+      setResultModal({ open: true, success: false, message: "Field name cannot be empty!", type: "fieldEmpty" });
       return;
     }
 
@@ -87,7 +88,7 @@ const ConfirmDetailsPage = () => {
       documents[modalDocIndex].extraFields.some(f => f.key === newFieldKey);
 
     if (existsInDoc) {
-      setResultModal({ open: true, success: false, message: "Field already exists in this document!" });
+      setResultModal({ open: true, success: false, message: "Field already exists in this document!", type: "fieldExist" });
       return;
     }
 
@@ -95,7 +96,7 @@ const ConfirmDetailsPage = () => {
     updated[modalDocIndex].extraFields.push({ key: newFieldKey, value: newFieldValue });
     setDocuments(updated);
     setModalOpen(false);
-    setResultModal({ open: true, success: true, message: "Field added successfully!" });
+    setResultModal({ open: true, success: true, message: "Field added successfully!", type: "add" });
   };
 
   const handleDeleteField = (docIndex, keyOrIndex, isExtra = false) => {
@@ -121,11 +122,11 @@ const ConfirmDetailsPage = () => {
       const response = await axios.post("http://localhost:8080/api/saveDetails", finalDocs);
 
       if (response.status === 200) {
-        setResultModal({ open: true, success: true, message: "Successfully saved!" });
+        setResultModal({ open: true, success: true, message: "Successfully saved!", type: "save" });
       }
     } catch (err) {
       console.error("Failed to save:", err);
-      setResultModal({ open: true, success: false, message: "Error saving data. Try again." });
+      setResultModal({ open: true, success: false, message: "Error saving data. Try again.", type: "error" });
     }
   };
 
@@ -307,7 +308,7 @@ const ConfirmDetailsPage = () => {
             variant="contained"
             onClick={() => {
               setResultModal({ ...resultModal, open: false });
-              if (resultModal.success) navigate("/");
+              if (resultModal.success && resultModal.type === "save") navigate("/");
             }}
           >
             OK

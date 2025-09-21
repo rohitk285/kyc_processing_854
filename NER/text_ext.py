@@ -87,6 +87,22 @@ Here are examples for different document types to guide your output:
   }
 ]
 
+### Driving License
+[
+    {
+        "document_type": "Driving License",
+        "named_entities": {
+            "Name": "Amit Sharma",
+            "License Number": "DL-0420110149646",
+            "Date of Birth": "10/10/1990",
+            "Address": "House No. 456, Sector 10, Gurgaon, Haryana - 122001",
+            "Issue Date": "15/08/2020",
+            "Expiry Date": "14/08/2030",
+            "Blood Group": "O+"
+        }
+    }
+]
+
 For every receipt or document, generate the response in the same format and structure, maintaining consistency for the document_type field. Always ensure the JSON format is valid.
 Important: Do NOT include any fields that are not listed in the examples above. Only output keys exactly matching those shown."""
 
@@ -198,6 +214,15 @@ def normalize_json_response(parsed_response):
             "IFSC Code",
             "Cheque Number",
             "Amount"
+        ],
+        "Driving License": [
+            "Name",
+            "License Number",
+            "Date of Birth",
+            "Address",
+            "Issue Date",
+            "Expiry Date",
+            "Blood Group"
         ]
     }
 
@@ -235,7 +260,7 @@ def process_pdf_with_gemini(file_stream, json_output_path=None):
         return []
 
     all_responses = []
-    valid_document_types = ["Aadhaar Card", "PAN Card", "Cheque", "Credit Card"]
+    valid_document_types = ["Aadhaar Card", "PAN Card", "Cheque", "Credit Card", "Driving License"]
 
     for idx, image_io in enumerate(images):
         print(f"Processing page {idx+1}/{len(images)}")
