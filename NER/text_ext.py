@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent"
+GEMINI_API_URL = os.getenv("GEMINI_API_URL")
 
 getDescriptionPrompt = """You are tasked with extracting and classifying the document type from the provided image and outputting only the named entities in strict JSON format. Follow these rules strictly:
 1. Always include the document_type field with an exact and consistent value for the same type of document (e.g., "PAN Card" for all PAN cards).
@@ -99,6 +99,24 @@ Here are examples for different document types to guide your output:
             "Issue Date": "15/08/2020",
             "Expiry Date": "14/08/2030",
             "Blood Group": "O+"
+        }
+    }
+]
+
+### Passport
+[
+    {
+        "document_type": "Passport",
+        "named_entities": {
+            "Name": "Amit Sharma",
+            "Passport Number": "N1234567",
+            "Date of Birth": "10/10/1990",
+            "Address": "House No. 456, Sector 10, Gurgaon, Haryana - 122001",
+            "Gender": "Male",
+            "Nationality": "Indian",
+            "Issue Date": "15/08/2020",
+            "Expiry Date": "14/08/2030",
+            "Place of Issue": "Delhi"
         }
     }
 ]
@@ -223,6 +241,17 @@ def normalize_json_response(parsed_response):
             "Issue Date",
             "Expiry Date",
             "Blood Group"
+        ],
+        "Passport": [
+            "Name",
+            "Passport Number",
+            "Date of Birth",
+            "Address",
+            "Gender",
+            "Nationality",
+            "Issue Date",
+            "Expiry Date",
+            "Place of Issue"
         ]
     }
 
@@ -260,7 +289,7 @@ def process_pdf_with_gemini(file_stream, json_output_path=None):
         return []
 
     all_responses = []
-    valid_document_types = ["Aadhaar Card", "PAN Card", "Cheque", "Credit Card", "Driving License"]
+    valid_document_types = ["Aadhaar Card", "PAN Card", "Cheque", "Credit Card", "Driving License", "Passport"]
 
     for idx, image_io in enumerate(images):
         print(f"Processing page {idx+1}/{len(images)}")

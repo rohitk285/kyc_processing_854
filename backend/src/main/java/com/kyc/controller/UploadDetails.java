@@ -31,6 +31,7 @@ public class UploadDetails {
             MongoCollection<Document> creditCardCollection = db.getCollection("creditcard");
             MongoCollection<Document> chequeCollection = db.getCollection("cheque");
             MongoCollection<Document> drivingLicenseCollection = db.getCollection("drivinglicense");
+            MongoCollection<Document> passportCollection = db.getCollection("passport");
 
             String custId = new ObjectId().toString();
             String name = null;
@@ -66,6 +67,10 @@ public class UploadDetails {
                     case "Driving License":
                         Document drivingLicenseDoc = new Document("cust_id", custId).append("name", name);
                         drivingLicenseCollection.insertOne(drivingLicenseDoc);
+                        break;
+                    case "Passport":
+                        Document passportDoc = new Document("cust_id", custId).append("name", name);
+                        passportCollection.insertOne(passportDoc);
                         break;
                     default:
                         return ResponseEntity.badRequest()

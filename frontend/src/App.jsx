@@ -1,5 +1,3 @@
-// App.jsx
-import "./App.css";
 import { Routes, Route, BrowserRouter } from "react-router-dom";  // Import BrowserRouter for routing
 import UploadPage from './Pages/UploadPage';
 import EntryPage from "./Pages/EntryPage";
