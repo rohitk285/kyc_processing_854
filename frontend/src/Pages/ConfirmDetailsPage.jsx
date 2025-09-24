@@ -21,7 +21,7 @@ import axios from "axios";
 const ConfirmDetailsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-
+  const custId = location.state?.cust_id || null;
   const initialDocs =
     location.state?.extractedData?.flatMap(item => item.extracted_data) || [];
 
@@ -38,7 +38,7 @@ const ConfirmDetailsPage = () => {
   // Save / Name Inconsistency Modal
   const [resultModal, setResultModal] = useState({ open: false, success: true, message: "" });
 
-  // Check for Name inconsistency across all documents
+  // Check for Name inconsistency across all documents - not working - revamp later
   useEffect(() => {
     const nameValues = documents
       .map(
@@ -111,15 +111,20 @@ const ConfirmDetailsPage = () => {
 
   const handleSave = async () => {
     try {
+      const endpoint = custId ? "http://localhost:8080/api/saveDetailsExisting" : "http://localhost:8080/api/saveDetails";
+
       const finalDocs = documents.map(doc => {
         const merged = { ...doc.named_entities };
         doc.extraFields.forEach(f => {
           if (f.key.trim()) merged[f.key] = f.value;
         });
-        return { ...doc, named_entities: merged, extraFields: undefined };
+        const baseDocs = { ...doc, named_entities: merged, extraFields: undefined };
+        if(custId) baseDocs.cust_id = custId;
+
+        return baseDocs;
       });
 
-      const response = await axios.post("http://localhost:8080/api/saveDetails", finalDocs);
+      const response = await axios.post(endpoint, finalDocs);
 
       if (response.status === 200) {
         setResultModal({ open: true, success: true, message: "Successfully saved!", type: "save" });
@@ -160,6 +165,12 @@ const ConfirmDetailsPage = () => {
       <Typography variant="h4" sx={{ fontWeight: "bold", marginBottom: 4, fontFamily: "Oswald" }}>
         Confirm Your KYC Details
       </Typography>
+
+      {custId && (
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#444' }}>
+          Customer ID: {custId}
+        </Typography>
+      )}
 
       {documents.map((doc, index) => {
         const docType = Array.isArray(doc.document_type)

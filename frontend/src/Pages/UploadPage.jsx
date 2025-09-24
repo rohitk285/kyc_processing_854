@@ -127,10 +127,7 @@ const UploadPage = () => {
         formDataToSend.append("cust_id", formData.cust_id);
       }
 
-      const endpoint =
-        customerType === "new"
-          ? "http://localhost:8080/api/details"
-          : "http://localhost:8080/api/existingCustomer";
+      const endpoint = "http://localhost:8080/api/details";
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -138,10 +135,13 @@ const UploadPage = () => {
       });
 
       const result = await response.json();
-      console.log(result.data);
+
       if (response.ok) {
         navigate("/confirm-details", {
-          state: { extractedData: result.data },
+          state: {
+            extractedData: result.data,
+            cust_id: customerType === "existing" ? formData.cust_id : null,
+          },
         });
       } else {
         setAlert({

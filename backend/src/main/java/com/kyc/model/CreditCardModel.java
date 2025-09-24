@@ -4,7 +4,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collection="creditCard")
+@Document(collection="creditcard")
 public class CreditCardModel {
     @Id
     private String id; // automatically indexed as _id by mongo db

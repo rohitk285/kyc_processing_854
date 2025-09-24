@@ -126,27 +126,6 @@ const UserDetailsPage = () => {
                                 </Grid>
                             ))}
 
-                            {/* Document Links */}
-                            {links.length > 0 && (
-                                <Grid item xs={12}>
-                                    <Typography variant="h6" sx={{ fontWeight: "bold", color: "#FF5722" }}>Related Documents:</Typography>
-                                    <List>
-                                        {links.map((docObj, idx) => {
-                                            const docType = Object.keys(docObj)[0];
-                                            const docInfo = docObj[docType];
-                                            return (
-                                                <ListItem key={idx}>
-                                                    <ListItemText
-                                                        primary={docType}
-                                                        secondary={docInfo?.fileLink ? <Link href={docInfo.fileLink} target="_blank">View Document</Link> : "No document available"}
-                                                    />
-                                                </ListItem>
-                                            );
-                                        })}
-                                    </List>
-                                </Grid>
-                            )}
-
                             {/* Update Button */}
                             {showUpdateBtn && (
                                 <Grid item xs={12}>
