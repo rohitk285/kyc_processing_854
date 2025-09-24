@@ -8,9 +8,11 @@ from text_ext import process_pdf_with_gemini
 app = Flask(__name__)
 CORS(app)
 
+
 @app.route('/', methods=['GET'])
 def test():
     return jsonify({"message": "Flask server is running"}), 200
+
 
 @app.route('/uploadDetails', methods=['POST'])
 def upload_details():
@@ -24,12 +26,12 @@ def upload_details():
         for file_key, file in files.items():
             # Read file content in memory
             file_stream = BytesIO(file.read())
-            
+
             # Process PDF using Llama
             document_data = process_pdf_with_gemini(file_stream)
             if not document_data:
                 return jsonify({"error": f"Failed to process document: {file.filename}"}), 500
-            
+
             document_outputs.append(document_data)
 
         # Flatten output if multiple files
@@ -51,6 +53,7 @@ def upload_details():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

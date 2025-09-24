@@ -19,9 +19,9 @@ const Navbar = () => {
     <AppBar
       position="fixed"
       sx={{
-        backgroundColor: "#FFFFFF", // White navbar
-        color: "#000000", // Default text color to black
-        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)", // Subtle shadow for the navbar
+        backgroundColor: "#FFFFFF",
+        color: "#000000",
+        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
         padding: 1,
       }}
     >
@@ -33,7 +33,7 @@ const Navbar = () => {
           sx={{
             cursor: "pointer",
             fontWeight: "bold",
-            color: "#FF5722", // Orange color for Appian text
+            color: "#FF5722",
             fontFamily: "Bebas Neue",
           }}
           onClick={() => navigate("/uploadDocs")}
@@ -47,20 +47,20 @@ const Navbar = () => {
           <Button
             onMouseEnter={handleMenuOpen}
             sx={{
-              color: "#000000", // Black text
+              color: "#000000",
               fontWeight: "bold",
-              fontSize: "18px", // Increased font size
+              fontSize: "18px",
               textTransform: "none",
               fontFamily: "Nunito",
-              marginRight: 2, // Spacing between buttons
-              padding: "8px 20px", // Bubble-like padding
-              borderRadius: "10px", // Rounded bubble style
+              marginRight: 2,
+              padding: "8px 20px",
+              borderRadius: "10px",
               ":hover": {
-                color: "#FF5722", // Change text color to orange on hover
-                textDecoration: "underline", // Underline text on hover
-                textDecorationThickness: "4px", // Thicker underline
-                textUnderlineOffset: "5px", // Offset underline closer to bottom edge
-                textDecorationColor: "#FF5722", // Orange underline
+                color: "#FF5722",
+                textDecoration: "underline",
+                textDecorationThickness: "4px",
+                textUnderlineOffset: "5px",
+                textDecorationColor: "#FF5722",
               },
             }}
           >
@@ -78,8 +78,8 @@ const Navbar = () => {
             }}
             sx={{
               "& .MuiPaper-root": {
-                backgroundColor: "#FFFFFF", // White background for dropdown
-                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)", // Subtle shadow
+                backgroundColor: "#FFFFFF",
+                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
               },
             }}
           >
@@ -92,19 +92,19 @@ const Navbar = () => {
                     text === "By Upload Date"
                       ? "/retrievedate"
                       : text === "By Customer Name"
-                      ? "/"
-                      : "/retrievedoc"
+                        ? "/"
+                        : "/retrievedoc"
                   );
                 }}
                 sx={{
-                  color: "#000000", // Black text
-                  fontSize: "1rem", // Increased font size
+                  color: "#000000",
+                  fontSize: "1rem",
                   ":hover": {
-                    color: "#FF5722", // Orange text on hover
-                    textDecoration: "underline", // Underline text on hover
-                    textDecorationThickness: "3px", // Thicker underline
-                    textUnderlineOffset: "5px", // Offset underline closer to bottom edge
-                    textDecorationColor: "#FF5722", // Orange underline
+                    color: "#FF5722",
+                    textDecoration: "underline",
+                    textDecorationThickness: "3px",
+                    textUnderlineOffset: "5px",
+                    textDecorationColor: "#FF5722",
                   },
                 }}
               >
@@ -114,25 +114,30 @@ const Navbar = () => {
           </Menu>
 
           {/* Other Buttons */}
-          {["Upload", "About Us", "Logout"].map((text, index) => (
+          {["Upload", "Update", "About Us", "Logout"].map((text) => (
             <Button
-              key={index}
-              onClick={() => navigate(index === 0 ? "/uploadDocs" : "#")}
+              key={text}
+              onClick={() => {
+                if (text === "Upload") navigate("/uploadDocs");
+                else if (text === "Update") navigate("/updateDetails"); // Open the search page
+                else if (text === "About Us") navigate("/about"); // Update route as needed
+                else if (text === "Logout") navigate("/logout"); // Update route as needed
+              }}
               sx={{
-                color: "#000000", // Black text
+                color: "#000000",
                 fontWeight: "bold",
-                fontSize: "18px", // Increased font size
+                fontSize: "18px",
                 fontFamily: "Nunito",
                 textTransform: "none",
-                marginRight: 2, // Spacing between buttons
-                padding: "8px 20px", // Bubble-like padding
-                borderRadius: "10px", // Rounded bubble style
+                marginRight: 2,
+                padding: "8px 20px",
+                borderRadius: "10px",
                 ":hover": {
-                  color: "#FF5722", // Change text color to orange on hover
-                  textDecoration: "underline", // Underline text on hover
-                  textDecorationThickness: "5px", // Thicker underline
-                  textUnderlineOffset: "20px", // Offset underline closer to bottom edge
-                  textDecorationColor: "#FF5722", // Orange underline
+                  color: "#FF5722",
+                  textDecoration: "underline",
+                  textDecorationThickness: "5px",
+                  textUnderlineOffset: "20px",
+                  textDecorationColor: "#FF5722",
                 },
               }}
             >

@@ -16,38 +16,38 @@ import java.util.*;
 @RestController
 @RequestMapping("/api")
 public class SearchByCustID {
-    
+
     @Value("${spring.data.mongodb.uri}")
     private String mongoUriString;
 
     @GetMapping("/custID/{cust_id}")
     public ResponseEntity<?> getCustomerById(
-        @PathVariable("cust_id") String custId) {
-            try {
-                try (var mongoClient = MongoClients.create(mongoUriString)) {
-                    MongoDatabase database = mongoClient.getDatabase("kyc_db");
-                    MongoCollection<Document> collection = database.getCollection("document");
+            @PathVariable("cust_id") String custId) {
+        try {
+            try (var mongoClient = MongoClients.create(mongoUriString)) {
+                MongoDatabase database = mongoClient.getDatabase("kyc_db");
+                MongoCollection<Document> collection = database.getCollection("document");
 
-                    Pattern pattern = Pattern.compile(custId, Pattern.CASE_INSENSITIVE);
-                    Document query = new Document("cust_id", pattern);
+                Pattern pattern = Pattern.compile(custId, Pattern.CASE_INSENSITIVE);
+                Document query = new Document("cust_id", pattern);
 
-                    Document projection = new Document("name", 1)
-                            .append("cust_id", 1)
-                            .append("_id", 0);
-                    
-                    // -> .limit() function is being used to restrict the number of results to 12
-                    FindIterable<Document> result = collection.find(query). projection(projection).limit(12);
-                    List<String> returnList = new ArrayList<>();
-                    for(Document doc : result) {
-                        returnList.add(doc.toJson());
-                    }
+                Document projection = new Document("name", 1)
+                        .append("cust_id", 1)
+                        .append("_id", 0);
 
-                    return ResponseEntity.ok(returnList);
+                // -> .limit() function is being used to restrict the number of results to 12
+                FindIterable<Document> result = collection.find(query).projection(projection).limit(12);
+                List<String> returnList = new ArrayList<>();
+                for (Document doc : result) {
+                    returnList.add(doc.toJson());
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("An error occurred: " + e.getMessage());
+
+                return ResponseEntity.ok(returnList);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An error occurred: " + e.getMessage());
         }
+    }
 }

@@ -83,7 +83,7 @@ public class UploadExistingController {
                 }
             }
 
-            try (var mongoClient = MongoClients.create(mongoUriString)){
+            try (var mongoClient = MongoClients.create(mongoUriString)) {
                 MongoDatabase database = mongoClient.getDatabase("kyc_db");
                 MongoCollection<Document> collection = database.getCollection("document");
 
@@ -91,59 +91,61 @@ public class UploadExistingController {
                 Document projection = new Document("document_type", 1).append("entities", 1);
 
                 Document result = collection.find(filter).projection(projection).first();
-                if(result == null){
+                if (result == null) {
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                             "status", "error",
                             "message", "Customer not found"));
                 }
-                
-                List<String> existingDocumentTypes = (List<String>) result.get("document_type");
-                if(existingDocumentTypes == null) existingDocumentTypes = new ArrayList<>();
-                
 
-                for(Map<String, Object> doc: extracted){
+                List<String> existingDocumentTypes = (List<String>) result.get("document_type");
+                if (existingDocumentTypes == null)
+                    existingDocumentTypes = new ArrayList<>();
+
+                for (Map<String, Object> doc : extracted) {
                     Object docTypeObj = doc.get("document_type");
-                    
+
                     List<String> newTypes = new ArrayList<>();
                     if (docTypeObj instanceof List<?> list) {
                         for (Object t : list)
                             newTypes.add(String.valueOf(t));
-                    }
-                    else if (docTypeObj instanceof String s) {
+                    } else if (docTypeObj instanceof String s) {
                         newTypes.add(s);
                     }
 
-                    for(String temp: newTypes){
-                        if(existingDocumentTypes.contains(temp)){
+                    for (String temp : newTypes) {
+                        if (existingDocumentTypes.contains(temp)) {
                             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
                                     "status", "error",
-                                    "message", "Document type "+temp+" already exists for this customer"));
+                                    "message", "Document type " + temp + " already exists for this customer"));
                         }
                     }
 
                     Document existingEntities = (Document) result.get("entities");
                     Object docEntities = doc.get("named_entities");
-                    if(existingEntities == null) existingEntities = new Document();
+                    if (existingEntities == null)
+                        existingEntities = new Document();
 
-                    if(docEntities instanceof Map<?,?> map){
-                        for(Map.Entry<?,?> entry: map.entrySet()){
+                    if (docEntities instanceof Map<?, ?> map) {
+                        for (Map.Entry<?, ?> entry : map.entrySet()) {
                             String key = String.valueOf(entry.getKey());
                             Object value = entry.getValue();
 
-                             //appending only if the key doesn't exist in the existing entities field
-                            if(!existingEntities.containsKey(key)){
+                            // appending only if the key doesn't exist in the existing entities field
+                            if (!existingEntities.containsKey(key)) {
                                 existingEntities.append(key, value);
                             }
                         }
                     }
 
-                    Document updatedDoc = new Document().append("$push", new Document("document_type", newTypes.size()==1 ? newTypes.get(0) : newTypes))
-                                                        .append("$set", new Document("entities", existingEntities));
+                    Document updatedDoc = new Document()
+                            .append("$push",
+                                    new Document("document_type", newTypes.size() == 1 ? newTypes.get(0) : newTypes))
+                            .append("$set", new Document("entities", existingEntities));
                     collection.updateOne(filter, updatedDoc);
 
                     String tempType = newTypes.get(0).toLowerCase();
                     String type = tempType;
-                    switch(tempType){
+                    switch (tempType) {
                         case "pan card":
                             type = "pan";
                             break;
@@ -157,8 +159,8 @@ public class UploadExistingController {
 
                     MongoCollection<Document> typeCollection = database.getCollection(type);
                     String name = null;
-                    if(docEntities instanceof Map<?,?>){
-                        Map<?,?> temp = (Map<?,?>) docEntities;
+                    if (docEntities instanceof Map<?, ?>) {
+                        Map<?, ?> temp = (Map<?, ?>) docEntities;
                         name = (String) temp.get("Name");
                     }
 

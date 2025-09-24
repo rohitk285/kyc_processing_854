@@ -42,7 +42,7 @@ public class UploadDetails {
                 String docType = (String) doc.get("document_type");
                 documentTypes.add(docType);
                 Map<String, Object> namedEntities = (Map<String, Object>) doc.get("named_entities");
-                if(name == null && namedEntities.containsKey("Name")) {
+                if (name == null && namedEntities.containsKey("Name")) {
                     name = namedEntities.get("Name").toString();
                 }
                 entities.putAll(namedEntities);
