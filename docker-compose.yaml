@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: kyc_db
+
+  kyc_backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: kyc_backend
+    container_name: kyc_backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/kyc_db
+    depends_on:
+      - mongo
