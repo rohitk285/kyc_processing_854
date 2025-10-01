@@ -1,5 +1,6 @@
 package com.kyc.controller;
 
+import com.mongodb.WriteConcern;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -36,34 +37,38 @@ public class UpdateDetailsController {
             @RequestBody Map<String, Object> updatedDetails) {
 
         try (var mongoClient = MongoClients.create(mongoUriString)) {
-            MongoDatabase database = mongoClient.getDatabase("kyc_db");
-            MongoCollection<Document> collection = database.getCollection("document");
+            try (var session = mongoClient.startSession()) {
+                return session.withTransaction(() -> {
+                    MongoDatabase database = mongoClient.getDatabase("kyc_db").withWriteConcern(WriteConcern.MAJORITY);
+                    MongoCollection<Document> collection = database.getCollection("document");
 
-            Document filter = new Document("cust_id", custId);
-            Document updateOperation = new Document();
+                    Document filter = new Document("cust_id", custId);
+                    Document updateOperation = new Document();
 
-            // Only include fields provided in the request body
-            if (updatedDetails.containsKey("name")) {
-                updateOperation.append("name", updatedDetails.get("name"));
+                    if (updatedDetails.containsKey("name")) {
+                        updateOperation.append("name", updatedDetails.get("name"));
+                    }
+                    if (updatedDetails.containsKey("entities")) {
+                        updateOperation.append("entities", updatedDetails.get("entities"));
+                    }
+
+                    if (updateOperation.isEmpty()) {
+                        return ResponseEntity.badRequest()
+                                .body(Map.of("status", "error", "message", "No valid fields provided to update."));
+                    }
+
+                    UpdateResult result = collection.updateOne(session, filter, new Document("$set", updateOperation));
+
+                    if (result.getMatchedCount() == 0) {
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                .body(Map.of("status", "error", "message",
+                                        "Customer with ID '" + custId + "' not found."));
+                    }
+
+                    return ResponseEntity
+                            .ok(Map.of("status", "success", "message", "Customer details updated successfully."));
+                });
             }
-            if (updatedDetails.containsKey("entities")) {
-                updateOperation.append("entities", updatedDetails.get("entities"));
-            }
-
-            if (updateOperation.isEmpty()) {
-                return ResponseEntity.badRequest().body(
-                        Map.of("status", "error", "message", "No valid fields provided to update."));
-            }
-
-            UpdateResult result = collection.updateOne(filter, new Document("$set", updateOperation));
-
-            if (result.getMatchedCount() == 0) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("status", "error", "message", "Customer with ID '" + custId + "' not found."));
-            }
-
-            return ResponseEntity.ok(Map.of("status", "success", "message", "Customer details updated successfully."));
-
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

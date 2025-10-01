@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import org.springframework.beans.factory.annotation.Value;
+
+import com.mongodb.WriteConcern;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -28,7 +30,9 @@ public class UploadDetailsExisting {
 
             // using this syntax to implement atomicity using transaction in springboot mongodb
             return session.withTransaction(() -> {
-                MongoDatabase db = mongoClient.getDatabase("kyc_db");
+                // this ensures durability since ACK is given after writing to majority nodes
+                MongoDatabase db = mongoClient.getDatabase("kyc_db").withWriteConcern(WriteConcern.MAJORITY);
+
                 MongoCollection<Document> documentCollection = db.getCollection("document");
                 MongoCollection<Document> aadharCollection = db.getCollection("aadhaar");
                 MongoCollection<Document> panCollection = db.getCollection("pan");

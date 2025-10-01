@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.beans.factory.annotation.Value;
+
+import com.mongodb.WriteConcern;
 import com.mongodb.client.*;
 // import com.mongodb.client.model.UpdateOptions;
 import org.bson.Document;
@@ -26,7 +28,9 @@ public class UploadDetails {
 
             // implementation of transaction to ensure atomicity
             return session.withTransaction(() -> {
-                MongoDatabase db = mongoClient.getDatabase("kyc_db");
+                // this ensures durability since ACK is given after writing to majority nodes
+                MongoDatabase db = mongoClient.getDatabase("kyc_db").withWriteConcern(WriteConcern.MAJORITY);
+                
                 MongoCollection<Document> documentCollection = db.getCollection("document");
                 MongoCollection<Document> aadharCollection = db.getCollection("aadhaar");
                 MongoCollection<Document> panCollection = db.getCollection("pan");

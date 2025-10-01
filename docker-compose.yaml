@@ -1,4 +1,5 @@
 version: "3.8"
+
 services:
   mongo:
     image: mongo:6.0
@@ -7,6 +8,12 @@ services:
       - "27017:27017"
     environment:
       MONGO_INITDB_DATABASE: kyc_db
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    command: ["--replSet", "rs0", "--bind_ip_all", "--keyFile", "/etc/mongo-keyfile/mongo-keyfile.txt"]
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo-keyfile/mongo-keyfile.txt:/etc/mongo-keyfile/mongo-keyfile.txt:ro
 
   kyc_backend:
     build:
@@ -17,6 +24,22 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/kyc_db
+      SPRING_DATA_MONGODB_URI: mongodb://root:rootpassword@mongo:27017/kyc_db?replicaSet=rs0
     depends_on:
       - mongo
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - kyc_backend
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+
+volumes:
+  mongo-data:
+  
