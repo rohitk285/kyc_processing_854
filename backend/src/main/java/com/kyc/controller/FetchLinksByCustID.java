@@ -4,6 +4,7 @@ import org.bson.Document;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import com.mongodb.ReadConcern;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -31,7 +32,9 @@ public class FetchLinksByCustID {
             }
 
             try (var mongoClient = MongoClients.create(mongoUriString)) {
-                MongoDatabase database = mongoClient.getDatabase("kyc_db");
+                // ensures consistency of data that is read and returned
+                MongoDatabase database = mongoClient.getDatabase("kyc_db").withReadConcern(ReadConcern.MAJORITY);
+                
                 MongoCollection<Document> aadhaar = database.getCollection("aadhaar");
                 MongoCollection<Document> pan = database.getCollection("pan");
                 MongoCollection<Document> creditcard = database.getCollection("creditcard");

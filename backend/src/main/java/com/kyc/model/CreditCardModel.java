@@ -3,17 +3,20 @@ package com.kyc.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.validation.constraints.NotBlank;
 
 @Document(collection="creditcard")
 public class CreditCardModel {
     @Id
     private String id; // automatically indexed as _id by mongo db
 
+    @NotBlank(message = "Name must not be blank")
     @Indexed
     private String name;  // remove if not needed
 
     private String fileLink;
 
+    @NotBlank(message = "cust_id must not be blank")
     @Indexed
     private String cust_id; // foreign key reference to DocumentModel._id - creating a reference in mongodb
 

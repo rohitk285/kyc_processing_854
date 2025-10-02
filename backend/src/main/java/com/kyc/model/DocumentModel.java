@@ -1,6 +1,9 @@
 package com.kyc.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import jakarta.validation.constraints.NotBlank;
+
 import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.util.List;
@@ -11,6 +14,7 @@ public class DocumentModel {
     @Id
     private String cust_id;  // mongo db automatically indexes this field since it is the _id
 
+    @NotBlank(message = "Name must not be blank")
     @Indexed
     private String name;
     

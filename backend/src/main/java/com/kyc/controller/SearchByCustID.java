@@ -9,6 +9,8 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.springframework.beans.factory.annotation.Value;
 import java.util.regex.Pattern;
+
+import com.mongodb.ReadConcern;
 import com.mongodb.client.FindIterable;
 
 import java.util.*;
@@ -25,7 +27,9 @@ public class SearchByCustID {
             @PathVariable("cust_id") String custId) {
         try {
             try (var mongoClient = MongoClients.create(mongoUriString)) {
-                MongoDatabase database = mongoClient.getDatabase("kyc_db");
+                // ensures consistency of data that is read and returned
+                MongoDatabase database = mongoClient.getDatabase("kyc_db").withReadConcern(ReadConcern.MAJORITY);
+                
                 MongoCollection<Document> collection = database.getCollection("document");
 
                 Pattern pattern = Pattern.compile(custId, Pattern.CASE_INSENSITIVE);
