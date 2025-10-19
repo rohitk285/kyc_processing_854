@@ -10,10 +10,13 @@ services:
       MONGO_INITDB_DATABASE: kyc_db
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: rootpassword
-    command: ["--replSet", "rs0", "--bind_ip_all", "--keyFile", "/etc/mongo-keyfile/mongo-keyfile.txt"]
+    command: ["--replSet", "rs0", "--bind_ip_all"]
     volumes:
       - mongo-data:/data/db
-      - ./mongo-keyfile/mongo-keyfile.txt:/etc/mongo-keyfile/mongo-keyfile.txt:ro
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      retries: 5
 
   kyc_backend:
     build:
@@ -26,7 +29,8 @@ services:
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://root:rootpassword@mongo:27017/kyc_db?replicaSet=rs0
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
 
   frontend:
     build:
@@ -42,4 +46,3 @@ services:
 
 volumes:
   mongo-data:
-  

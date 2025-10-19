@@ -1,5 +1,6 @@
 package com.kyc.controller;
 
+import com.kyc.util.EncryptionUtil;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
@@ -11,7 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api")
@@ -42,6 +43,11 @@ public class UpdateDetailsController {
                     MongoDatabase database = mongoClient.getDatabase("kyc_db").withWriteConcern(WriteConcern.MAJORITY);
                     MongoCollection<Document> collection = database.getCollection("document");
 
+                    if(custId == null || custId.isEmpty()){
+                        return ResponseEntity.badRequest()
+                                .body(Map.of("status", "error", "message", "cust_id in path cannot be null or empty."));
+                    }
+
                     Document filter = new Document("cust_id", custId);
                     Document updateOperation = new Document();
 
@@ -49,7 +55,23 @@ public class UpdateDetailsController {
                         updateOperation.append("name", updatedDetails.get("name"));
                     }
                     if (updatedDetails.containsKey("entities")) {
-                        updateOperation.append("entities", updatedDetails.get("entities"));
+                        Map<String, Object> entitiesMap = (Map<String, Object>) updatedDetails.get("entities");
+                        Document encryptedEntities = new Document();
+
+                        for(Map.Entry<String, Object> entry: entitiesMap.entrySet()){
+                            String key = entry.getKey();
+                            String value = entry.getValue().toString();
+                            
+                            try{
+                                Map<String, String> encResult = EncryptionUtil.encryptWithIV(value);
+                                encryptedEntities.put(key, encResult);
+                            }
+                            catch(Exception e){
+                                throw new RuntimeException("Failed to encrypt field: " + key, e);
+                            }
+                        }
+
+                        updateOperation.append("entities", encryptedEntities);
                     }
 
                     if (updateOperation.isEmpty()) {

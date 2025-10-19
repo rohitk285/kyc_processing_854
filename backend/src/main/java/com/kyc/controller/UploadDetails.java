@@ -1,16 +1,14 @@
 package com.kyc.controller;
 
+import com.kyc.util.EncryptionUtil;
 import org.bson.types.ObjectId;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import org.springframework.beans.factory.annotation.Value;
-
+// import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.*;
-// import com.mongodb.client.model.UpdateOptions;
 import org.bson.Document;
-
 import java.util.*;
 
 @RestController
@@ -23,14 +21,11 @@ public class UploadDetails {
     @PostMapping("/saveDetails")
     public ResponseEntity<?> uploadCustDetails(@RequestBody List<Map<String, Object>> userDetails) {
         try (var mongoClient = MongoClients.create(mongoUriString)) {
-            // starting client session for transaction support - atomicity
             ClientSession session = mongoClient.startSession();
 
-            // implementation of transaction to ensure atomicity
             return session.withTransaction(() -> {
-                // this ensures durability since ACK is given after writing to majority nodes
                 MongoDatabase db = mongoClient.getDatabase("kyc_db").withWriteConcern(WriteConcern.MAJORITY);
-                
+
                 MongoCollection<Document> documentCollection = db.getCollection("document");
                 MongoCollection<Document> aadharCollection = db.getCollection("aadhaar");
                 MongoCollection<Document> panCollection = db.getCollection("pan");
@@ -42,7 +37,7 @@ public class UploadDetails {
                 String custId = new ObjectId().toString();
                 String name = null;
                 List<String> documentTypes = new ArrayList<>();
-                Map<String, Object> entities = new HashMap<>();
+                Map<String, Object> encryptedEntitiesGlobal = new HashMap<>();
 
                 for (Map<String, Object> doc : userDetails) {
                     String docType = (String) doc.get("document_type");
@@ -61,9 +56,21 @@ public class UploadDetails {
                         name = namedEntities.get("Name").toString();
                     }
 
-                    entities.putAll(namedEntities);
+                    // encryption
+                    Map<String, Object> encryptedEntities = new HashMap<>();
+                    for (Map.Entry<String, Object> entry : namedEntities.entrySet()) {
+                        try {
+                            Map<String, String> encResult = EncryptionUtil.encryptWithIV(entry.getValue().toString());
+                            encryptedEntities.put(entry.getKey(), encResult);
+                            encryptedEntitiesGlobal.put(entry.getKey(), encResult);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to encrypt field: " + entry.getKey(), e);
+                        }
+                    }
 
-                    Document insertDoc = new Document("cust_id", custId);
+                    Document insertDoc = new Document("cust_id", custId)
+                            .append("name", name);
+
                     if (name != null) {
                         insertDoc.append("name", name);
                     }
@@ -95,7 +102,7 @@ public class UploadDetails {
                 Document documentToInsert = new Document("cust_id", custId)
                         .append("name", name)
                         .append("document_type", documentTypes)
-                        .append("entities", entities);
+                        .append("entities", encryptedEntitiesGlobal);
 
                 documentCollection.insertOne(session, documentToInsert);
 
@@ -104,14 +111,16 @@ public class UploadDetails {
                         "customer_id", custId,
                         "name", name,
                         "document_types", documentTypes,
-                        "named_entities", entities));
+                        "encrypted_entities", encryptedEntitiesGlobal
+                ));
             });
 
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of(
                     "status", "error",
-                    "message", e.getMessage()));
+                    "message", e.getMessage()
+            ));
         }
     }
 }
