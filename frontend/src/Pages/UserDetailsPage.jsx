@@ -43,7 +43,6 @@ const UserDetailsPage = () => {
           document_type: user.document_type,
         }
       );
-      console.log("Links response:", response.data);
       setLinks(response.data);
     } catch (err) {
       console.error("Cannot fetch user links", err);

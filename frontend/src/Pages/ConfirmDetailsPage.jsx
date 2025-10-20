@@ -22,6 +22,7 @@ import {
   ErrorOutline,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const ConfirmDetailsPage = () => {
   const location = useLocation();
@@ -173,7 +174,8 @@ const ConfirmDetailsPage = () => {
 
     if (conflictingFields.size > 0) {
       // Navigate to secondary confirmation page
-      navigate("/secondaryConfirm", { state: { mergedFields, conflictingFields, documents } });
+      console.log(documents);
+      navigate("/secondaryConfirm", { state: { documents: documents, uploadedFiles: uploadedFiles } });
     } else {
       handleSave(); // no conflicts, save directly
     }
