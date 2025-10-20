@@ -1,14 +1,22 @@
 package com.kyc.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kyc.util.EncryptionUtil;
+import com.kyc.util.GoogleDriveUploader;
+
 import org.bson.types.ObjectId;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
+
 // import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.*;
 import org.bson.Document;
+
+import java.io.InputStream;
 import java.util.*;
 
 @RestController
@@ -19,8 +27,15 @@ public class UploadDetails {
     private String mongoUriString;
 
     @PostMapping("/saveDetails")
-    public ResponseEntity<?> uploadCustDetails(@RequestBody List<Map<String, Object>> userDetails) {
+    public ResponseEntity<?> uploadCustDetails(@RequestPart("documents") String userDetailsJson,
+            @RequestPart("files") List<MultipartFile> files) {
         try (var mongoClient = MongoClients.create(mongoUriString)) {
+            ObjectMapper mapper = new ObjectMapper();
+            List<Map<String, Object>> userDetails = mapper.readValue(
+                    userDetailsJson,
+                    new TypeReference<List<Map<String, Object>>>() {
+                    });
+
             ClientSession session = mongoClient.startSession();
 
             return session.withTransaction(() -> {
@@ -39,63 +54,73 @@ public class UploadDetails {
                 List<String> documentTypes = new ArrayList<>();
                 Map<String, Object> encryptedEntitiesGlobal = new HashMap<>();
 
-                for (Map<String, Object> doc : userDetails) {
-                    String docType = (String) doc.get("document_type");
-                    if (docType == null || docType.isEmpty()) {
-                        throw new RuntimeException("Missing or empty document_type");
-                    }
+                for (int i = 0; i < userDetails.size(); i++) {
+                    try {
+                        MultipartFile file = files.get(i);
+                        try (InputStream inputStream = file.getInputStream()) {
+                            String fileLink = GoogleDriveUploader.uploadToDrive(inputStream, file.getOriginalFilename(),
+                                    file.getContentType());
 
-                    documentTypes.add(docType);
+                            Map<String, Object> doc = userDetails.get(i);
+                            String docType = (String) doc.get("document_type");
+                            if (docType == null || docType.isEmpty()) {
+                                throw new RuntimeException("Missing or empty document_type");
+                            }
 
-                    Map<String, Object> namedEntities = (Map<String, Object>) doc.get("named_entities");
-                    if (namedEntities == null) {
-                        throw new RuntimeException("Missing named_entities for document type: " + docType);
-                    }
+                            documentTypes.add(docType);
 
-                    if (name == null && namedEntities.containsKey("Name")) {
-                        name = namedEntities.get("Name").toString();
-                    }
+                            Map<String, Object> namedEntities = (Map<String, Object>) doc.get("named_entities");
+                            if (namedEntities == null) {
+                                throw new RuntimeException("Missing named_entities for document type: " + docType);
+                            }
 
-                    // encryption
-                    Map<String, Object> encryptedEntities = new HashMap<>();
-                    for (Map.Entry<String, Object> entry : namedEntities.entrySet()) {
-                        try {
-                            Map<String, String> encResult = EncryptionUtil.encryptWithIV(entry.getValue().toString());
-                            encryptedEntities.put(entry.getKey(), encResult);
-                            encryptedEntitiesGlobal.put(entry.getKey(), encResult);
-                        } catch (Exception e) {
-                            throw new RuntimeException("Failed to encrypt field: " + entry.getKey(), e);
+                            if (name == null && namedEntities.containsKey("Name")) {
+                                name = namedEntities.get("Name").toString();
+                            }
+
+                            // encryption
+                            // Map<String, Object> encryptedEntities = new HashMap<>();
+                            for (Map.Entry<String, Object> entry : namedEntities.entrySet()) {
+                                try {
+                                    Map<String, String> encResult = EncryptionUtil
+                                            .encryptWithIV(entry.getValue().toString());
+                                    // encryptedEntities.put(entry.getKey(), encResult);
+                                    encryptedEntitiesGlobal.put(entry.getKey(), encResult);
+                                } catch (Exception e) {
+                                    throw new RuntimeException("Failed to encrypt field: " + entry.getKey(), e);
+                                }
+                            }
+
+                            Document insertDoc = new Document("cust_id", custId)
+                                    .append("fileLink", fileLink);
+
+                            switch (docType) {
+                                case "Aadhaar Card":
+                                    aadharCollection.insertOne(session, insertDoc);
+                                    break;
+                                case "PAN Card":
+                                    panCollection.insertOne(session, insertDoc);
+                                    break;
+                                case "Credit Card":
+                                    creditCardCollection.insertOne(session, insertDoc);
+                                    break;
+                                case "Cheque":
+                                    chequeCollection.insertOne(session, insertDoc);
+                                    break;
+                                case "Driving License":
+                                    drivingLicenseCollection.insertOne(session, insertDoc);
+                                    break;
+                                case "Passport":
+                                    passportCollection.insertOne(session, insertDoc);
+                                    break;
+                                default:
+                                    throw new RuntimeException("Unknown document type: " + docType);
+                            }
+
                         }
-                    }
-
-                    Document insertDoc = new Document("cust_id", custId)
-                            .append("name", name);
-
-                    if (name != null) {
-                        insertDoc.append("name", name);
-                    }
-
-                    switch (docType) {
-                        case "Aadhaar Card":
-                            aadharCollection.insertOne(session, insertDoc);
-                            break;
-                        case "PAN Card":
-                            panCollection.insertOne(session, insertDoc);
-                            break;
-                        case "Credit Card":
-                            creditCardCollection.insertOne(session, insertDoc);
-                            break;
-                        case "Cheque":
-                            chequeCollection.insertOne(session, insertDoc);
-                            break;
-                        case "Driving License":
-                            drivingLicenseCollection.insertOne(session, insertDoc);
-                            break;
-                        case "Passport":
-                            passportCollection.insertOne(session, insertDoc);
-                            break;
-                        default:
-                            throw new RuntimeException("Unknown document type: " + docType);
+                    } catch (Exception e) {
+                        throw new RuntimeException("Error processing document at index " + i + ": " + e.getMessage(),
+                                e);
                     }
                 }
 
@@ -111,16 +136,14 @@ public class UploadDetails {
                         "customer_id", custId,
                         "name", name,
                         "document_types", documentTypes,
-                        "encrypted_entities", encryptedEntitiesGlobal
-                ));
+                        "encrypted_entities", encryptedEntitiesGlobal));
             });
 
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of(
                     "status", "error",
-                    "message", e.getMessage()
-            ));
+                    "message", e.getMessage()));
         }
     }
 }

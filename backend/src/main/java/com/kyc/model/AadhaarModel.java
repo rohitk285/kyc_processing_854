@@ -10,9 +10,9 @@ public class AadhaarModel {
     @Id
     private String id; // automatically indexed as _id by mongo db
 
-    @NotBlank(message = "Name must not be blank")
-    @Indexed
-    private String name; // remove if not needed
+    // @NotBlank(message = "Name must not be blank")
+    // @Indexed
+    // private String name;
 
     private String fileLink;
 
@@ -23,8 +23,8 @@ public class AadhaarModel {
     public AadhaarModel() {
     }
 
-    public AadhaarModel(String name, String fileLink, String cust_id) {
-        this.name = name;
+    public AadhaarModel(String fileLink, String cust_id) {
+        // this.name = name;
         this.fileLink = fileLink;
         this.cust_id = cust_id;
     }
@@ -35,14 +35,6 @@ public class AadhaarModel {
 
     public void setId(String id) {
         this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public String getFileLink() {

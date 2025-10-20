@@ -19,7 +19,7 @@ public class FetchLinksByCustID {
     @Value("${spring.data.mongodb.uri}")
     private String mongoUriString;
 
-    @PostMapping("customerDetailsLinks")
+    @PostMapping("/customerDetailsLinks")
     public ResponseEntity<?> getCustomerLinksById(
             @RequestBody Map<String, Object> reqBody) {
         try {
@@ -33,12 +33,15 @@ public class FetchLinksByCustID {
 
             try (var mongoClient = MongoClients.create(mongoUriString)) {
                 // ensures consistency of data that is read and returned
-                MongoDatabase database = mongoClient.getDatabase("kyc_db").withReadConcern(ReadConcern.MAJORITY);
-                
-                MongoCollection<Document> aadhaar = database.getCollection("aadhaar");
-                MongoCollection<Document> pan = database.getCollection("pan");
-                MongoCollection<Document> creditcard = database.getCollection("creditcard");
-                MongoCollection<Document> cheque = database.getCollection("cheque");
+                MongoDatabase db = mongoClient.getDatabase("kyc_db").withReadConcern(ReadConcern.MAJORITY);
+
+                // MongoCollection<Document> documentCollection = db.getCollection("document");
+                MongoCollection<Document> aadharCollection = db.getCollection("aadhaar");
+                MongoCollection<Document> panCollection = db.getCollection("pan");
+                MongoCollection<Document> creditCardCollection = db.getCollection("creditcard");
+                MongoCollection<Document> chequeCollection = db.getCollection("cheque");
+                MongoCollection<Document> drivingLicenseCollection = db.getCollection("drivinglicense");
+                MongoCollection<Document> passportCollection = db.getCollection("passport");
 
                 List<Map<String, Object>> result = new ArrayList<>();
                 Document projection = new Document("fileLink", 1).append("_id", 0);
@@ -47,24 +50,37 @@ public class FetchLinksByCustID {
                     Map<String, Object> map = new HashMap<>();
                     switch (dType) {
                         case "Aadhaar Card":
-                            Document resultAadhaar = aadhaar.find(new Document("cust_id", custId))
+                            Document resultAadhaar = aadharCollection.find(new Document("cust_id", custId))
                                     .projection(projection).first();
                             map.put("Aadhaar Card", resultAadhaar);
                             break;
                         case "PAN Card":
-                            Document resultPan = pan.find(new Document("cust_id", custId)).projection(projection)
+                            Document resultPan = panCollection.find(new Document("cust_id", custId))
+                                    .projection(projection)
                                     .first();
                             map.put("PAN Card", resultPan);
                             break;
                         case "Credit Card":
-                            Document resultCreditCard = creditcard.find(new Document("cust_id", custId))
+                            Document resultCreditCard = creditCardCollection.find(new Document("cust_id", custId))
                                     .projection(projection).first();
                             map.put("Credit Card", resultCreditCard);
                             break;
                         case "Cheque":
-                            Document resultCheque = cheque.find(new Document("cust_id", custId)).projection(projection)
+                            Document resultCheque = chequeCollection.find(new Document("cust_id", custId))
+                                    .projection(projection)
                                     .first();
                             map.put("Cheque", resultCheque);
+                            break;
+                        case "Driving License":
+                            Document resultDrivingLicense = drivingLicenseCollection
+                                    .find(new Document("cust_id", custId))
+                                    .projection(projection).first();
+                            map.put("Driving License", resultDrivingLicense);
+                            break;
+                        case "Passport":
+                            Document resultPassport = passportCollection.find(new Document("cust_id", custId))
+                                    .projection(projection).first();
+                            map.put("Passport", resultPassport);
                             break;
                         default:
                             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

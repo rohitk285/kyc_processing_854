@@ -28,7 +28,7 @@ const UserDetailsPage = () => {
           params: { cust_id: cust_id },
         }
       );
-      setUser(response.data);
+      setUser(response.data); 
     } catch (err) {
       console.error("Cannot fetch user details", err);
     }

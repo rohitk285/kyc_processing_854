@@ -12,9 +12,15 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
+  CircularProgress,
 } from "@mui/material";
-import { AddCircleOutline, Delete, WarningAmber, CheckCircle, ErrorOutline } from "@mui/icons-material";
+import {
+  AddCircleOutline,
+  Delete,
+  WarningAmber,
+  CheckCircle,
+  ErrorOutline,
+} from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -22,31 +28,36 @@ const ConfirmDetailsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const custId = location.state?.cust_id || null;
+  const uploadedFiles = location.state?.uploadedFiles || [];
   const initialDocs =
-    location.state?.extractedData?.flatMap(item => item.extracted_data) || [];
+    location.state?.extractedData?.flatMap((item) => item.extracted_data) || [];
 
   const [documents, setDocuments] = useState(
-    initialDocs.map(doc => ({ ...doc, extraFields: [] }))
+    initialDocs.map((doc) => ({ ...doc, extraFields: [] }))
   );
 
-  // Modal States
+  const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalDocIndex, setModalDocIndex] = useState(null);
   const [newFieldKey, setNewFieldKey] = useState("");
   const [newFieldValue, setNewFieldValue] = useState("");
 
   // Save / Name Inconsistency Modal
-  const [resultModal, setResultModal] = useState({ open: false, success: true, message: "" });
+  const [resultModal, setResultModal] = useState({
+    open: false,
+    success: true,
+    message: "",
+  });
 
   // Check for Name inconsistency across all documents - not working - revamp later
   useEffect(() => {
     const nameValues = documents
       .map(
-        doc =>
+        (doc) =>
           doc.named_entities?.name ??
-          doc.extraFields.find(f => f.key.toLowerCase() === "name")?.value
+          doc.extraFields.find((f) => f.key.toLowerCase() === "name")?.value
       )
-      .filter(v => v !== undefined);
+      .filter((v) => v !== undefined);
 
     if (nameValues.length > 1 && new Set(nameValues).size > 1) {
       setResultModal({
@@ -54,7 +65,7 @@ const ConfirmDetailsPage = () => {
         success: false,
         message:
           '"Name" field has inconsistent values across documents. Please review before saving!',
-        type: "inconsistency"
+        type: "inconsistency",
       });
     }
   }, [documents]);
@@ -64,7 +75,8 @@ const ConfirmDetailsPage = () => {
     if (isExtra) {
       updated[docIndex].extraFields[field.index][field.keyOrValue] = value;
     } else {
-      if (!updated[docIndex].named_entities) updated[docIndex].named_entities = {};
+      if (!updated[docIndex].named_entities)
+        updated[docIndex].named_entities = {};
       updated[docIndex].named_entities[field] = value;
     }
     setDocuments(updated);
@@ -79,24 +91,42 @@ const ConfirmDetailsPage = () => {
 
   const handleAddField = () => {
     if (!newFieldKey.trim()) {
-      setResultModal({ open: true, success: false, message: "Field name cannot be empty!", type: "fieldEmpty" });
+      setResultModal({
+        open: true,
+        success: false,
+        message: "Field name cannot be empty!",
+        type: "fieldEmpty",
+      });
       return;
     }
 
     const existsInDoc =
       documents[modalDocIndex].named_entities?.[newFieldKey] ||
-      documents[modalDocIndex].extraFields.some(f => f.key === newFieldKey);
+      documents[modalDocIndex].extraFields.some((f) => f.key === newFieldKey);
 
     if (existsInDoc) {
-      setResultModal({ open: true, success: false, message: "Field already exists in this document!", type: "fieldExist" });
+      setResultModal({
+        open: true,
+        success: false,
+        message: "Field already exists in this document!",
+        type: "fieldExist",
+      });
       return;
     }
 
     const updated = [...documents];
-    updated[modalDocIndex].extraFields.push({ key: newFieldKey, value: newFieldValue });
+    updated[modalDocIndex].extraFields.push({
+      key: newFieldKey,
+      value: newFieldValue,
+    });
     setDocuments(updated);
     setModalOpen(false);
-    setResultModal({ open: true, success: true, message: "Field added successfully!", type: "add" });
+    setResultModal({
+      open: true,
+      success: true,
+      message: "Field added successfully!",
+      type: "add",
+    });
   };
 
   const handleDeleteField = (docIndex, keyOrIndex, isExtra = false) => {
@@ -111,27 +141,55 @@ const ConfirmDetailsPage = () => {
 
   const handleSave = async () => {
     try {
-      const endpoint = custId ? "http://localhost:8080/api/saveDetailsExisting" : "http://localhost:8080/api/saveDetails";
+      setLoading(true);
+      const endpoint = custId
+        ? "http://localhost:8080/api/saveDetailsExisting"
+        : "http://localhost:8080/api/saveDetails";
 
-      const finalDocs = documents.map(doc => {
+      const formData = new FormData();
+      uploadedFiles.forEach((file) => {
+        formData.append("files", file);
+      });
+
+      const finalDocs = documents.map((doc) => {
         const merged = { ...doc.named_entities };
-        doc.extraFields.forEach(f => {
+        doc.extraFields.forEach((f) => {
           if (f.key.trim()) merged[f.key] = f.value;
         });
-        const baseDocs = { ...doc, named_entities: merged, extraFields: undefined };
-        if(custId) baseDocs.cust_id = custId;
+        const baseDocs = {
+          ...doc,
+          named_entities: merged,
+          extraFields: undefined,
+        };
+        if (custId) baseDocs.cust_id = custId;
 
         return baseDocs;
       });
 
-      const response = await axios.post(endpoint, finalDocs);
+      formData.append("documents", JSON.stringify(finalDocs));
+
+      const response = await axios.post(endpoint, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       if (response.status === 200) {
-        setResultModal({ open: true, success: true, message: "Successfully saved!", type: "save" });
+        setResultModal({
+          open: true,
+          success: true,
+          message: "Successfully saved!",
+          type: "save",
+        });
       }
     } catch (err) {
       console.error("Failed to save:", err);
-      setResultModal({ open: true, success: false, message: "Error saving data. Try again.", type: "error" });
+      setResultModal({
+        open: true,
+        success: false,
+        message: "Error saving data. Try again.",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -153,7 +211,8 @@ const ConfirmDetailsPage = () => {
             No Data to Display
           </Typography>
           <Typography variant="body1" sx={{ mt: 1 }}>
-            It seems no extracted details were found. Please try uploading a document again.
+            It seems no extracted details were found. Please try uploading a
+            document again.
           </Typography>
         </Box>
       </Container>
@@ -162,14 +221,57 @@ const ConfirmDetailsPage = () => {
 
   return (
     <Box sx={{ padding: 4, backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
-      <Typography variant="h4" sx={{ fontWeight: "bold", marginBottom: 4, fontFamily: "Oswald" }}>
+      {loading && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+          }}
+        >
+          <CircularProgress color="inherit" />
+        </Box>
+      )}
+
+      <Typography
+        variant="h4"
+        sx={{ fontWeight: "bold", marginBottom: 4, fontFamily: "Oswald" }}
+      >
         Confirm Your KYC Details
       </Typography>
 
       {custId && (
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#444' }}>
+        <Typography
+          variant="h6"
+          sx={{ mb: 2, fontWeight: "bold", color: "#444" }}
+        >
           Customer ID: {custId}
         </Typography>
+      )}
+
+      {uploadedFiles.length > 0 && (
+        <Box sx={{ mb: 4 }}>
+          <Typography
+            variant="h6"
+            sx={{ mb: 1, fontWeight: "bold", color: "#444" }}
+          >
+            Uploaded Files:
+          </Typography>
+          <ul>
+            {uploadedFiles.map((file, index) => (
+              <li key={index}>
+                <Typography variant="body1">{file.name}</Typography>
+              </li>
+            ))}
+          </ul>
+        </Box>
       )}
 
       {documents.map((doc, index) => {
@@ -189,42 +291,70 @@ const ConfirmDetailsPage = () => {
               marginBottom: 4,
             }}
           >
-            <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: "bold", color: "#FF5722" }}>
+            <Typography
+              variant="h6"
+              sx={{ marginBottom: 2, fontWeight: "bold", color: "#FF5722" }}
+            >
               Document {index + 1} - {docType}
             </Typography>
 
             <Grid container spacing={2}>
-              {Object.entries(doc.named_entities || {}).map(([key, value], i) => (
-                <Grid item xs={12} sm={6} key={`original-${i}`} sx={{ display: "flex", alignItems: "center" }}>
-                  <TextField
-                    label={key}
-                    value={value}
-                    onChange={(e) => handleFieldChange(index, key, e.target.value)}
-                    fullWidth
-                    variant="outlined"
-                    sx={{ "& .MuiInputBase-root": { backgroundColor: "#f9f9f9" } }}
-                  />
-                  <IconButton
-                    onClick={() => handleDeleteField(index, key)}
-                    color="error"
-                    sx={{ ml: 1 }}
+              {Object.entries(doc.named_entities || {}).map(
+                ([key, value], i) => (
+                  <Grid
+                    item
+                    xs={12}
+                    sm={6}
+                    key={`original-${i}`}
+                    sx={{ display: "flex", alignItems: "center" }}
                   >
-                    <Delete />
-                  </IconButton>
-                </Grid>
-              ))}
+                    <TextField
+                      label={key}
+                      value={value}
+                      onChange={(e) =>
+                        handleFieldChange(index, key, e.target.value)
+                      }
+                      fullWidth
+                      variant="outlined"
+                      sx={{
+                        "& .MuiInputBase-root": { backgroundColor: "#f9f9f9" },
+                      }}
+                    />
+                    <IconButton
+                      onClick={() => handleDeleteField(index, key)}
+                      color="error"
+                      sx={{ ml: 1 }}
+                    >
+                      <Delete />
+                    </IconButton>
+                  </Grid>
+                )
+              )}
 
               {doc.extraFields.map((field, i) => (
-                <Grid item xs={12} sm={6} key={`extra-${i}`} sx={{ display: "flex", alignItems: "center" }}>
+                <Grid
+                  item
+                  xs={12}
+                  sm={6}
+                  key={`extra-${i}`}
+                  sx={{ display: "flex", alignItems: "center" }}
+                >
                   <TextField
                     label={field.key}
                     value={field.value}
                     onChange={(e) =>
-                      handleFieldChange(index, { index: i, keyOrValue: "value" }, e.target.value, true)
+                      handleFieldChange(
+                        index,
+                        { index: i, keyOrValue: "value" },
+                        e.target.value,
+                        true
+                      )
                     }
                     fullWidth
                     variant="outlined"
-                    sx={{ "& .MuiInputBase-root": { backgroundColor: "#f9f9f9" } }}
+                    sx={{
+                      "& .MuiInputBase-root": { backgroundColor: "#f9f9f9" },
+                    }}
                   />
                   <IconButton
                     onClick={() => handleDeleteField(index, i, true)}
@@ -319,7 +449,8 @@ const ConfirmDetailsPage = () => {
             variant="contained"
             onClick={() => {
               setResultModal({ ...resultModal, open: false });
-              if (resultModal.success && resultModal.type === "save") navigate("/");
+              if (resultModal.success && resultModal.type === "save")
+                navigate("/");
             }}
           >
             OK

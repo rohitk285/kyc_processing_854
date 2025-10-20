@@ -141,6 +141,7 @@ const UploadPage = () => {
           state: {
             extractedData: result.data,
             cust_id: customerType === "existing" ? formData.cust_id : null,
+            uploadedFiles: formData.files
           },
         });
       } else {

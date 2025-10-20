@@ -10,10 +10,6 @@ public class CreditCardModel {
     @Id
     private String id; // automatically indexed as _id by mongo db
 
-    @NotBlank(message = "Name must not be blank")
-    @Indexed
-    private String name;  // remove if not needed
-
     private String fileLink;
 
     @NotBlank(message = "cust_id must not be blank")
@@ -22,8 +18,7 @@ public class CreditCardModel {
 
     public CreditCardModel() {}
 
-    public CreditCardModel(String name, String fileLink, String cust_id) {
-        this.name = name;
+    public CreditCardModel(String fileLink, String cust_id) {
         this.fileLink = fileLink;
         this.cust_id = cust_id;
     }
@@ -33,12 +28,6 @@ public class CreditCardModel {
     }
     public void setId(String id) {
         this.id = id;
-    }
-    public String getName() {
-        return name;
-    }
-    public void setName(String name) {
-        this.name = name;
     }
     public String getFileLink() {
         return fileLink;
