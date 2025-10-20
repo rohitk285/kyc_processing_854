@@ -8,6 +8,7 @@ import RetrievalPageDate from "./Pages/RetrievalPageDate";
 import ConfirmDetailsPage from "./Pages/ConfirmDetailsPage";
 import UpdateDetails from "./Pages/UpdateDetails";
 import UserDetailsUpdate from "./Pages/UserDetailsUpdate";
+import SecondaryConfirmPage from "./Pages/SecondaryConfirmPage";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/confirm-details" element={<ConfirmDetailsPage />} />
           <Route path="/updateDetails" element={<UpdateDetails />} />
           <Route path="/user-details-update" element={<UserDetailsUpdate />} />
+          <Route path="/secondaryConfirm" element={<SecondaryConfirmPage />} />
         </Routes>
       </BrowserRouter>
     </div>

@@ -22,7 +22,6 @@ import {
   ErrorOutline,
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
 
 const ConfirmDetailsPage = () => {
   const location = useLocation();
@@ -53,9 +52,9 @@ const ConfirmDetailsPage = () => {
   useEffect(() => {
     const nameValues = documents
       .map(
-        (doc) =>
-          doc.named_entities?.name ??
-          doc.extraFields.find((f) => f.key.toLowerCase() === "name")?.value
+        doc =>
+          doc.named_entities?.name?.trim() ??
+          doc.extraFields.find(f => f.key.toLowerCase() === "name")?.value?.trim()
       )
       .filter((v) => v !== undefined);
 
@@ -139,7 +138,58 @@ const ConfirmDetailsPage = () => {
     setDocuments(updated);
   };
 
+  // NEW: Detect conflicts and navigate to secondary page
+  const handleConfirm = () => {
+    if (documents.length <= 1) {
+      handleSave(); // no conflicts possible
+      return;
+    }
+
+    // Collect all field keys
+    const allKeys = new Set();
+    documents.forEach(doc => {
+      Object.keys(doc.named_entities || {}).forEach(k => allKeys.add(k.trim()));
+      doc.extraFields.forEach(f => allKeys.add(f.key.trim()));
+    });
+
+    const mergedFields = {};
+    const conflictingFields = new Set();
+
+    allKeys.forEach(key => {
+      const values = documents.map(doc => {
+        const val =
+          doc.named_entities?.[key] ??
+          doc.extraFields.find(f => f.key === key)?.value ??
+          "";
+        return val?.trim() ?? "";
+      });
+      const uniqueValues = Array.from(new Set(values));
+      if (uniqueValues.length === 1) {
+        mergedFields[key] = uniqueValues[0]; // same across all docs
+      } else {
+        conflictingFields.add(key); // conflict exists
+      }
+    });
+
+    if (conflictingFields.size > 0) {
+      // Navigate to secondary confirmation page
+      navigate("/secondaryConfirm", { state: { mergedFields, conflictingFields, documents } });
+    } else {
+      handleSave(); // no conflicts, save directly
+    }
+  };
+
   const handleSave = async () => {
+    // prepare final docs
+    const finalDocs = documents.map(doc => {
+      const merged = { ...doc.named_entities };
+      doc.extraFields.forEach(f => {
+        if (f.key.trim()) merged[f.key] = f.value;
+      });
+      return { ...doc, named_entities: merged, extraFields: undefined };
+    });
+
+    // POST to backend
     try {
       setLoading(true);
       const endpoint = custId
@@ -356,11 +406,7 @@ const ConfirmDetailsPage = () => {
                       "& .MuiInputBase-root": { backgroundColor: "#f9f9f9" },
                     }}
                   />
-                  <IconButton
-                    onClick={() => handleDeleteField(index, i, true)}
-                    color="error"
-                    sx={{ ml: 1 }}
-                  >
+                  <IconButton onClick={() => handleDeleteField(index, i, true)} color="error" sx={{ ml: 1 }}>
                     <Delete />
                   </IconButton>
                 </Grid>
@@ -368,12 +414,7 @@ const ConfirmDetailsPage = () => {
             </Grid>
 
             <Box sx={{ mt: 2, textAlign: "right" }}>
-              <Button
-                startIcon={<AddCircleOutline />}
-                onClick={() => handleAddFieldModal(index)}
-                variant="outlined"
-                sx={{ borderRadius: "20px" }}
-              >
+              <Button startIcon={<AddCircleOutline />} onClick={() => handleAddFieldModal(index)} variant="outlined">
                 Add Field
               </Button>
             </Box>
@@ -386,17 +427,9 @@ const ConfirmDetailsPage = () => {
           variant="contained"
           color="primary"
           size="large"
-          onClick={handleSave}
-          sx={{
-            backgroundColor: "#FE8D01",
-            padding: "10px 30px",
-            fontSize: "16px",
-            fontWeight: "bold",
-            borderRadius: "25px",
-            "&:hover": { backgroundColor: "#e57d01" },
-          }}
+          onClick={handleConfirm} // <-- updated
         >
-          Save
+          Confirm & Continue
         </Button>
       </Box>
 
@@ -427,7 +460,7 @@ const ConfirmDetailsPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Result / Error Modal */}
+      {/* Result Modal */}
       <Dialog
         open={resultModal.open}
         onClose={() => setResultModal({ ...resultModal, open: false })}
