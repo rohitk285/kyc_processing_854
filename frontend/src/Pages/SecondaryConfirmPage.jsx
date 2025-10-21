@@ -7,6 +7,7 @@ import {
   TextField,
   Paper,
   Container,
+  CircularProgress,
 } from "@mui/material";
 import { CheckCircle, ErrorOutline, WarningAmber } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -22,6 +23,7 @@ const SecondaryConfirmPage = () => {
   const [commonFields, setCommonFields] = useState({});
   const [conflictingFields, setConflictingFields] = useState({});
   const [documents, setDocuments] = useState(initialDocs);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!documents.length) return;
@@ -59,6 +61,7 @@ const SecondaryConfirmPage = () => {
 
   const handleSave = async () => {
     try {
+      setLoading(true);
       // Merge common fields and conflictingFields entered by user
       const finalEntities = { ...commonFields, ...conflictingFields };
       const finalDocs = documents.map((doc) => ({
@@ -73,11 +76,15 @@ const SecondaryConfirmPage = () => {
 
       formData.append("documents", JSON.stringify(finalDocs));
 
-      const response = await axios.post("http://localhost:8080/api/saveDetails", formData, {
-        headers: {
+      const response = await axios.post(
+        "http://localhost:8080/api/saveDetails",
+        formData,
+        {
+          headers: {
             "Content-Type": "multipart/form-data",
+          },
         }
-      });
+      );
 
       if (response.status === 200) {
         alert("Saved successfully!");
@@ -86,6 +93,8 @@ const SecondaryConfirmPage = () => {
     } catch (err) {
       console.error(err);
       alert("Error saving data!");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -117,6 +126,24 @@ const SecondaryConfirmPage = () => {
 
   return (
     <Box sx={{ padding: 4, backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
+      {loading && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+          }}
+        >
+          <CircularProgress color="inherit" />
+        </Box>
+      )}
       <Typography variant="h4" sx={{ fontWeight: "bold", marginBottom: 4 }}>
         Confirm Conflicting Details
       </Typography>
