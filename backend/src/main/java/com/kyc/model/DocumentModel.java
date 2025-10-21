@@ -21,12 +21,17 @@ public class DocumentModel {
     private List<String> document_type;
     private Map<String, Object> entities;
 
+    @NotBlank(message = "user_id must not be blank")
+    @Indexed
+    private String user_id; // foreign key reference to UserModel - creating a reference in mongodb
+
     public DocumentModel() {}
 
-    public DocumentModel(String name, List<String> document_type, Map<String, Object> entities) {
+    public DocumentModel(String name, List<String> document_type, Map<String, Object> entities, String user_id) {
         this.name = name;
         this.document_type = document_type;
         this.entities = entities;
+        this.user_id = user_id;
     }
 
     public String getCust_id() {
@@ -59,5 +64,11 @@ public class DocumentModel {
 
     public void setEntities(Map<String, Object> entities) {
         this.entities = entities;
+    }
+    public String getUser_id() {
+        return user_id;
+    }
+    public void setUser_id(String user_id) {
+        this.user_id = user_id;
     }
 }
