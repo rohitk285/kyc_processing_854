@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.factory.annotation.Value;
 
 import com.mongodb.WriteConcern;
+import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -29,7 +30,7 @@ public class UploadDetailsExisting {
     public ResponseEntity<?> uploadCustDetails(@RequestBody List<Map<String, Object>> userDetails) {
         try (var mongoClient = MongoClients.create(mongoUriString)) {
             // client session for transaction - atomicity
-            var session = mongoClient.startSession();
+            ClientSession session = mongoClient.startSession();
 
             // using this syntax to implement atomicity using transaction in springboot
             // mongodb

@@ -29,8 +29,8 @@ services:
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://root:rootpassword@mongo:27017/kyc_db?replicaSet=rs0
     depends_on:
-      mongo:
-        condition: service_healthy
+      - mongo
+      - ner
 
   frontend:
     build:
@@ -43,6 +43,23 @@ services:
       - kyc_backend
     environment:
       CHOKIDAR_USEPOLLING: "true"
+
+  ner:
+    build:
+      context: ./NER
+      dockerfile: Dockerfile
+    container_name: ner
+    image: ner_service
+    ports:
+      - "5000:5000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_URL=${GEMINI_API_URL}
+    # optional: add a simple healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/" ]
+      interval: 10s
+      retries: 3
 
 volumes:
   mongo-data:
