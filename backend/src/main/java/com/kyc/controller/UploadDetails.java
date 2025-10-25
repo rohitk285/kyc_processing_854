@@ -28,7 +28,9 @@ public class UploadDetails {
 
     @PostMapping("/saveDetails")
     public ResponseEntity<?> uploadCustDetails(@RequestPart("documents") String userDetailsJson,
-            @RequestPart("files") List<MultipartFile> files) {
+            @RequestPart("files") List<MultipartFile> files,
+            @RequestPart("user_id") String user_id) {
+                
         try (var mongoClient = MongoClients.create(mongoUriString)) {
             ObjectMapper mapper = new ObjectMapper();
             List<Map<String, Object>> userDetails = mapper.readValue(
@@ -127,7 +129,8 @@ public class UploadDetails {
                 Document documentToInsert = new Document("cust_id", custId)
                         .append("name", name)
                         .append("document_type", documentTypes)
-                        .append("entities", encryptedEntitiesGlobal);
+                        .append("entities", encryptedEntitiesGlobal)
+                        .append("user_id", user_id);
 
                 documentCollection.insertOne(session, documentToInsert);
 

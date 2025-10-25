@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import {
   Box,
   Grid,
@@ -10,11 +10,13 @@ import {
 import Navbar from "../components/Navbar";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 const EntryPage = () => {
   const [formData, setFormData] = useState({ name: "", dob: "" });
   const [filteredResults, setFilteredResults] = useState([]);
   const navigate = useNavigate();
+  const user_id = useContext(AuthContext).userId;
 
   const handleChange = async (e) => {
     const { name, value } = e.target;
@@ -27,8 +29,10 @@ const EntryPage = () => {
     }
 
     try {
-      const encoded = encodeURIComponent(newFormData.name.trim());
-      const response = await axios.get(`http://localhost:8080/api/name/${encoded}`);
+      const response = await axios.post("http://localhost:8080/api/name", {
+        name: newFormData.name.trim(),
+        user_id: user_id,
+      });
 
       if (response.status === 200) {
         // ✅ Parse each JSON string in the response

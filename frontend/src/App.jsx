@@ -9,6 +9,8 @@ import ConfirmDetailsPage from "./Pages/ConfirmDetailsPage";
 import UpdateDetails from "./Pages/UpdateDetails";
 import UserDetailsUpdate from "./Pages/UserDetailsUpdate";
 import SecondaryConfirmPage from "./Pages/SecondaryConfirmPage";
+import LoginPage from "./Pages/Auth/LoginPage";
+import SignupPage from "./Pages/Auth/SignUpPage";
 
 function App() {
   return (
@@ -17,6 +19,8 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<EntryPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/sign-up" element={<SignupPage />} />
           <Route path="/uploadDocs" element={<UploadPage />} />
           <Route path="/user-details" element={<UserDetailsPage />} />
           <Route path="/settings" element={<SettingsPage />} />

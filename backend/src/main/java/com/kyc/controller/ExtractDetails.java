@@ -26,36 +26,27 @@ public class ExtractDetails {
     public ResponseEntity<?> extractOnly(@RequestParam("file") MultipartFile[] files) {
         try {
             List<Map<String, Object>> extractedResults = new ArrayList<>();
-            System.out.println("hi1");
             for (MultipartFile file : files) {
                 byte[] fileBytes = file.getBytes();
                 InputStream flaskStream = new ByteArrayInputStream(fileBytes);
-                System.out.println("hi2");
                 MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
                 body.add("file", new MultipartInputStreamFileResource(flaskStream, file.getOriginalFilename()));
-                System.out.println("hi3");
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-                System.out.println("hi4");
                 HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
                 RestTemplate restTemplate = new RestTemplate();
-                System.out.println("hi5");
                 ResponseEntity<Map<String, Object>> flaskResponse = restTemplate.exchange(
                         "http://localhost:5000/uploadDetails",
                         HttpMethod.POST,
                         requestEntity,
                         new ParameterizedTypeReference<>() {
                         });
-                    System.out.println("hi6");
                 if (flaskResponse.getStatusCode() != HttpStatus.OK || flaskResponse.getBody() == null) {
                     return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                             .body(Map.of("status", "error", "message", "Flask server error"));
                 }
-                System.out.println("hi7");
                 extractedResults.add(flaskResponse.getBody());
-                System.out.println("hi8");
             }
-            System.out.println("hi9");
             return ResponseEntity.ok(Map.of("status", "success", "data", extractedResults));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("status", "error", "message", e.getMessage()));

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   Typography,
@@ -12,6 +12,7 @@ import {
 import { CheckCircle, ErrorOutline, WarningAmber } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { AuthContext } from "../context/AuthContext";
 
 const SecondaryConfirmPage = () => {
   const location = useLocation();
@@ -19,11 +20,13 @@ const SecondaryConfirmPage = () => {
 
   const initialDocs = location.state?.documents || [];
   const uploadedFiles = location.state?.uploadedFiles || [];
+  const custId = location.state?.custId || null;
 
   const [commonFields, setCommonFields] = useState({});
   const [conflictingFields, setConflictingFields] = useState({});
   const [documents, setDocuments] = useState(initialDocs);
   const [loading, setLoading] = useState(false);
+  const user_id = useContext(AuthContext).userId;
 
   useEffect(() => {
     if (!documents.length) return;
@@ -62,10 +65,16 @@ const SecondaryConfirmPage = () => {
   const handleSave = async () => {
     try {
       setLoading(true);
+
+      const endpoint = custId
+        ? "http://localhost:8080/api/saveDetailsExisting"
+        : "http://localhost:8080/api/saveDetails";
+
       // Merge common fields and conflictingFields entered by user
       const finalEntities = { ...commonFields, ...conflictingFields };
       const finalDocs = documents.map((doc) => ({
         ...doc,
+        cust_id: custId,
         named_entities: finalEntities,
       }));
 
@@ -75,16 +84,11 @@ const SecondaryConfirmPage = () => {
       });
 
       formData.append("documents", JSON.stringify(finalDocs));
+      formData.append("user_id", user_id);
 
-      const response = await axios.post(
-        "http://localhost:8080/api/saveDetails",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const response = await axios.post(endpoint, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       if (response.status === 200) {
         alert("Saved successfully!");

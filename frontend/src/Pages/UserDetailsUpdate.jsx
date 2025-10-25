@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
     Box, Typography, Card, CardContent, Grid, TextField, List, ListItem, ListItemText, Link, Button
 } from "@mui/material";
 import Navbar from "../components/Navbar";
 import { useLocation } from "react-router-dom";
 import axios from "axios";
+import { AuthContext } from "../context/AuthContext";
 
 const UserDetailsPage = () => {
     const location = useLocation();
@@ -14,13 +15,15 @@ const UserDetailsPage = () => {
     const [editMode, setEditMode] = useState({});
     const [links, setLinks] = useState([]);
     const [showUpdateBtn, setShowUpdateBtn] = useState(false);
+    const user_id = useContext(AuthContext).userId;
 
     // Fetch user details
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const response = await axios.get("http://localhost:8080/api/customerDetailsCustID", {
-                    params: { cust_id }
+                const response = await axios.post("http://localhost:8080/api/customerDetailsCustID", {
+                    cust_id: cust_id,
+                    user_id: user_id
                 });
                 setUser(response.data);
                 setEditingUser(response.data);
@@ -38,7 +41,7 @@ const UserDetailsPage = () => {
             const fetchLinks = async () => {
                 try {
                     const response = await axios.post("http://localhost:8080/api/customerDetailsLinks", {
-                        cust_id,
+                        cust_id: cust_id,
                         document_type: user.document_type
                     });
                     setLinks(response.data || []);

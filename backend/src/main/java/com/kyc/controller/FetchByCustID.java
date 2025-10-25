@@ -20,20 +20,21 @@ public class FetchByCustID {
     @Value("${spring.data.mongodb.uri}")
     private String mongoUriString;
 
-    @GetMapping("/customerDetailsCustID")
-    public ResponseEntity<?> getCustomerDetailsById(
-            @RequestParam("cust_id") String custId) {
+    @PostMapping("/customerDetailsCustID")
+    public ResponseEntity<?> getCustomerDetailsById(@RequestBody Map<String, String> bodyReq) {
         try {
+            String custId = bodyReq.get("cust_id");
+            String userId = bodyReq.get("user_id");
+
             try (var mongoClient = MongoClients.create(mongoUriString)) {
                 // ReadConcern - returns data that has been ACK by the majority of replica set
-                // members
                 // ensures consistency of data that is read and returned
                 MongoDatabase database = mongoClient.getDatabase("kyc_db").withReadConcern(ReadConcern.MAJORITY);
 
                 MongoCollection<Document> collection = database.getCollection("document");
 
                 // fetching details of customer with cust_id
-                Document query = new Document("cust_id", custId);
+                Document query = new Document("cust_id", custId).append("user_id", userId);
                 Document result = collection.find(query).first();
 
                 if (result == null) {

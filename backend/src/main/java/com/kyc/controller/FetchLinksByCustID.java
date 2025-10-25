@@ -45,40 +45,41 @@ public class FetchLinksByCustID {
 
                 List<Map<String, Object>> result = new ArrayList<>();
                 Document projection = new Document("fileLink", 1).append("_id", 0);
+                Document query = new Document("cust_id", custId);
 
                 for (String dType : docType) {
                     Map<String, Object> map = new HashMap<>();
                     switch (dType) {
                         case "Aadhaar Card":
-                            Document resultAadhaar = aadharCollection.find(new Document("cust_id", custId))
+                            Document resultAadhaar = aadharCollection.find(query)
                                     .projection(projection).first();
                             map.put("Aadhaar Card", resultAadhaar);
                             break;
                         case "PAN Card":
-                            Document resultPan = panCollection.find(new Document("cust_id", custId))
+                            Document resultPan = panCollection.find(query)
                                     .projection(projection)
                                     .first();
                             map.put("PAN Card", resultPan);
                             break;
                         case "Credit Card":
-                            Document resultCreditCard = creditCardCollection.find(new Document("cust_id", custId))
+                            Document resultCreditCard = creditCardCollection.find(query)
                                     .projection(projection).first();
                             map.put("Credit Card", resultCreditCard);
                             break;
                         case "Cheque":
-                            Document resultCheque = chequeCollection.find(new Document("cust_id", custId))
+                            Document resultCheque = chequeCollection.find(query)
                                     .projection(projection)
                                     .first();
                             map.put("Cheque", resultCheque);
                             break;
                         case "Driving License":
                             Document resultDrivingLicense = drivingLicenseCollection
-                                    .find(new Document("cust_id", custId))
+                                    .find(query)
                                     .projection(projection).first();
                             map.put("Driving License", resultDrivingLicense);
                             break;
                         case "Passport":
-                            Document resultPassport = passportCollection.find(new Document("cust_id", custId))
+                            Document resultPassport = passportCollection.find(query)
                                     .projection(projection).first();
                             map.put("Passport", resultPassport);
                             break;

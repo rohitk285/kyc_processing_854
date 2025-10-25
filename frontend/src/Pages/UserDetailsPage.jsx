@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -13,22 +13,25 @@ import {
 import { useLocation } from "react-router-dom"; // To retrieve data passed through the router
 import axios from "axios";
 import { use } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 const UserDetailsPage = () => {
   const location = useLocation();
   const cust_id = location.state?.userData;
   const [user, setUser] = useState(null);
   const [links, setLinks] = useState([]);
+  const user_id = useContext(AuthContext).userId;
 
   async function getUserDetails() {
     try {
-      const response = await axios.get(
+      const response = await axios.post(
         "http://localhost:8080/api/customerDetailsCustID",
         {
-          params: { cust_id: cust_id },
+          cust_id: cust_id,
+          user_id: user_id,
         }
       );
-      setUser(response.data); 
+      setUser(response.data);
     } catch (err) {
       console.error("Cannot fetch user details", err);
     }
@@ -40,7 +43,7 @@ const UserDetailsPage = () => {
         "http://localhost:8080/api/customerDetailsLinks",
         {
           cust_id: cust_id,
-          document_type: user.document_type,
+          document_type: user.document_type
         }
       );
       setLinks(response.data);

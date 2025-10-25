@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   Typography,
@@ -23,6 +23,7 @@ import {
 } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { AuthContext } from "../context/AuthContext";
 
 const ConfirmDetailsPage = () => {
   const location = useLocation();
@@ -41,6 +42,7 @@ const ConfirmDetailsPage = () => {
   const [modalDocIndex, setModalDocIndex] = useState(null);
   const [newFieldKey, setNewFieldKey] = useState("");
   const [newFieldValue, setNewFieldValue] = useState("");
+  const user_id = useContext(AuthContext).userId;
 
   // Save / Name Inconsistency Modal
   const [resultModal, setResultModal] = useState({
@@ -174,8 +176,7 @@ const ConfirmDetailsPage = () => {
 
     if (conflictingFields.size > 0) {
       // Navigate to secondary confirmation page
-      console.log(documents);
-      navigate("/secondaryConfirm", { state: { documents: documents, uploadedFiles: uploadedFiles } });
+      navigate("/secondaryConfirm", { state: { documents: documents, uploadedFiles: uploadedFiles, custId: custId } });
     } else {
       handleSave(); // no conflicts, save directly
     }
@@ -191,7 +192,6 @@ const ConfirmDetailsPage = () => {
       return { ...doc, named_entities: merged, extraFields: undefined };
     });
 
-    // POST to backend
     try {
       setLoading(true);
       const endpoint = custId
@@ -219,6 +219,7 @@ const ConfirmDetailsPage = () => {
       });
 
       formData.append("documents", JSON.stringify(finalDocs));
+      formData.append("user_id", user_id);
 
       const response = await axios.post(endpoint, formData, {
         headers: { "Content-Type": "multipart/form-data" },

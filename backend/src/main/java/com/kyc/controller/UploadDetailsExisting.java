@@ -1,12 +1,17 @@
 package com.kyc.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kyc.util.EncryptionUtil;
+import com.kyc.util.GoogleDriveUploader;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 
 import com.mongodb.WriteConcern;
@@ -15,6 +20,8 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
+
+import java.io.InputStream;
 import java.util.*;
 
 // check and remove named_entities variable if not needed
@@ -27,8 +34,17 @@ public class UploadDetailsExisting {
     private String mongoUriString;
 
     @PostMapping("/saveDetailsExisting")
-    public ResponseEntity<?> uploadCustDetails(@RequestBody List<Map<String, Object>> userDetails) {
+    public ResponseEntity<?> uploadCustDetails(@RequestPart("documents") String userDetailsJson,
+            @RequestPart("files") List<MultipartFile> files,
+            @RequestPart("user_id") String user_id) {
+
         try (var mongoClient = MongoClients.create(mongoUriString)) {
+            ObjectMapper mapper = new ObjectMapper();
+            List<Map<String, Object>> userDetails = mapper.readValue(
+                    userDetailsJson,
+                    new TypeReference<List<Map<String, Object>>>() {
+                    });
+
             // client session for transaction - atomicity
             ClientSession session = mongoClient.startSession();
 
@@ -51,7 +67,7 @@ public class UploadDetailsExisting {
                     throw new RuntimeException("cust_id is required");
                 }
 
-                Document query = new Document("cust_id", custId);
+                Document query = new Document("cust_id", custId).append("user_id", user_id);
                 Document existingDoc = documentCollection.find(session, query).first();
                 if (existingDoc == null) {
                     throw new RuntimeException("Customer not found");
@@ -60,17 +76,16 @@ public class UploadDetailsExisting {
                 Map<String, Object> existingEntities = (Map<String, Object>) existingDoc.get("entities");
                 if (existingEntities == null)
                     existingEntities = new HashMap<>();
-                else{
+                else {
                     Map<String, Object> decryptedEntities = new HashMap<>();
-                    for(Map.Entry<String, Object> entry: existingEntities.entrySet()){
+                    for (Map.Entry<String, Object> entry : existingEntities.entrySet()) {
                         String key = entry.getKey();
-                        Object valueObj = entry.getValue();  // contains {iv, cipherText}
-                        Map<String, String> encryptedMap = (Map<String, String>) valueObj;  // vulnerability 
+                        Object valueObj = entry.getValue(); // contains {iv, cipherText}
+                        Map<String, String> encryptedMap = (Map<String, String>) valueObj; // vulnerability
                         try {
                             String decryptedValue = EncryptionUtil.decryptWithIV(encryptedMap);
                             decryptedEntities.put(key, decryptedValue);
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             throw new RuntimeException("Failed to decrypt field: " + key, e);
                         }
                     }
@@ -83,61 +98,73 @@ public class UploadDetailsExisting {
 
                 String name = existingDoc.getString("name");
 
-                for (Map<String, Object> doc : userDetails) {
-                    String docType = (String) doc.get("document_type");
-                    if (docType == null || docType.isEmpty())
-                        continue;
+                for (int i = 0; i < userDetails.size(); i++) {
+                    try {
+                        MultipartFile file = files.get(i);
+                        try (InputStream inputStream = file.getInputStream()) {
+                            String fileLink = GoogleDriveUploader.uploadToDrive(inputStream, file.getOriginalFilename(),
+                                    file.getContentType());
+                            Map<String, Object> doc = userDetails.get(i);
+                            String docType = (String) doc.get("document_type");
+                            if (docType == null || docType.isEmpty())
+                                continue;
 
-                    Map<String, Object> newEntities = (Map<String, Object>) doc.get("named_entities");
-                    if (newEntities == null)
-                        continue;
+                            Map<String, Object> newEntities = (Map<String, Object>) doc.get("named_entities");
+                            if (newEntities == null)
+                                continue;
 
-                    for (Map.Entry<String, Object> entry : newEntities.entrySet()) {
-                        String key = entry.getKey();
-                        // overwriting existing values with incoming values
-                        existingEntities.put(key, entry.getValue());
-                    }
+                            for (Map.Entry<String, Object> entry : newEntities.entrySet()) {
+                                String key = entry.getKey();
+                                // overwriting existing values with incoming values
+                                existingEntities.put(key, entry.getValue());
+                            }
 
-                    if (name == null && newEntities.containsKey("Name")) {
-                        name = newEntities.get("Name").toString();
-                    }
+                            if (name == null && newEntities.containsKey("Name")) {
+                                name = newEntities.get("Name").toString();
+                            }
 
-                    if (!existingDocumentTypes.contains(docType)) {
-                        existingDocumentTypes.add(docType);
-                    }
+                            if (!existingDocumentTypes.contains(docType)) {
+                                existingDocumentTypes.add(docType);
+                            }
 
-                    Document docQuery = new Document("cust_id", custId);
-                    Document updateDoc = new Document();
-                    if (name != null)
-                        updateDoc.append("name", name);
+                            Document docQuery = new Document("cust_id", custId);
+                            Document updateDoc = new Document();
+                    
+                            updateDoc.append("fileLink", fileLink);
 
-                    switch (docType) {
-                        case "Aadhaar Card":
-                            aadharCollection.updateOne(session, docQuery, new Document("$set", updateDoc),
-                                    new com.mongodb.client.model.UpdateOptions().upsert(true));
-                            break;
-                        case "PAN Card":
-                            panCollection.updateOne(session, docQuery, new Document("$set", updateDoc),
-                                    new com.mongodb.client.model.UpdateOptions().upsert(true));
-                            break;
-                        case "Credit Card":
-                            creditCardCollection.updateOne(session, docQuery, new Document("$set", updateDoc),
-                                    new com.mongodb.client.model.UpdateOptions().upsert(true));
-                            break;
-                        case "Cheque":
-                            chequeCollection.updateOne(session, docQuery, new Document("$set", updateDoc),
-                                    new com.mongodb.client.model.UpdateOptions().upsert(true));
-                            break;
-                        case "Driving License":
-                            drivingLicenseCollection.updateOne(session, docQuery, new Document("$set", updateDoc),
-                                    new com.mongodb.client.model.UpdateOptions().upsert(true));
-                            break;
-                        case "Passport":
-                            passportCollection.updateOne(session, docQuery, new Document("$set", updateDoc),
-                                    new com.mongodb.client.model.UpdateOptions().upsert(true));
-                            break;
-                        default:
-                            throw new RuntimeException("Unknown document type: " + docType);
+                            switch (docType) {
+                                case "Aadhaar Card":
+                                    aadharCollection.updateOne(session, docQuery, new Document("$set", updateDoc),
+                                            new com.mongodb.client.model.UpdateOptions().upsert(true));
+                                    break;
+                                case "PAN Card":
+                                    panCollection.updateOne(session, docQuery, new Document("$set", updateDoc),
+                                            new com.mongodb.client.model.UpdateOptions().upsert(true));
+                                    break;
+                                case "Credit Card":
+                                    creditCardCollection.updateOne(session, docQuery, new Document("$set", updateDoc),
+                                            new com.mongodb.client.model.UpdateOptions().upsert(true));
+                                    break;
+                                case "Cheque":
+                                    chequeCollection.updateOne(session, docQuery, new Document("$set", updateDoc),
+                                            new com.mongodb.client.model.UpdateOptions().upsert(true));
+                                    break;
+                                case "Driving License":
+                                    drivingLicenseCollection.updateOne(session, docQuery,
+                                            new Document("$set", updateDoc),
+                                            new com.mongodb.client.model.UpdateOptions().upsert(true));
+                                    break;
+                                case "Passport":
+                                    passportCollection.updateOne(session, docQuery, new Document("$set", updateDoc),
+                                            new com.mongodb.client.model.UpdateOptions().upsert(true));
+                                    break;
+                                default:
+                                    throw new RuntimeException("Unknown document type: " + docType);
+                            }
+                        }
+                    } catch (Exception e) {
+                        throw new RuntimeException("Error processing document at index " + i + ": " + e.getMessage(),
+                                e);
                     }
                 }
 
@@ -146,8 +173,7 @@ public class UploadDetailsExisting {
                     try {
                         Map<String, String> result = EncryptionUtil.encryptWithIV(entry.getValue().toString());
                         encryptedEntities.append(entry.getKey(), result);
-                    }
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         throw new RuntimeException("Failed to encrypt field: " + entry.getKey(), e);
                     }
                 }
@@ -155,7 +181,6 @@ public class UploadDetailsExisting {
                 Document updatedEntityFields = new Document("name", name)
                         .append("entities", encryptedEntities)
                         .append("document_type", existingDocumentTypes);
-                
 
                 documentCollection.updateOne(session, new Document("cust_id", custId),
                         new Document("$set", updatedEntityFields));

@@ -24,9 +24,14 @@ public class AuthController {
     private MongoTemplate mongoTemplate;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody UserModel user){
-        UserModel existingUser = mongoTemplate.findById(user.getUser_id(), UserModel.class);
-        if(existingUser != null){
+    public ResponseEntity<?> register(@RequestBody UserModel user) {
+        // searching by username
+        UserModel existingUser = mongoTemplate.findOne(
+                org.springframework.data.mongodb.core.query.Query.query(
+                        org.springframework.data.mongodb.core.query.Criteria.where("username").is(user.getUsername())),
+                UserModel.class);
+
+        if (existingUser != null) {
             return ResponseEntity.badRequest().body("Username already exists");
         }
 
@@ -36,17 +41,22 @@ public class AuthController {
 
         return ResponseEntity.ok("User registered successfully");
     }
-    
+
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody UserModel user){
-        UserModel existingUser = mongoTemplate.findById(user.getUser_id(), UserModel.class);
-        if(existingUser == null || !BCrypt.checkpw(user.getPassword(), existingUser.getPassword())){
+    public ResponseEntity<?> login(@RequestBody UserModel user) {
+        UserModel existingUser = mongoTemplate.findOne(
+                org.springframework.data.mongodb.core.query.Query.query(
+                        org.springframework.data.mongodb.core.query.Criteria.where("username").is(user.getUsername())),
+                UserModel.class);
+
+        if (existingUser == null || !BCrypt.checkpw(user.getPassword(), existingUser.getPassword())) {
             return ResponseEntity.status(401).body("Invalid username or password");
         }
 
         String token = jwtUtil.generateToken(existingUser.getUsername());
         Map<String, String> response = new HashMap<>();
         response.put("token", token);
+        response.put("user_id", existingUser.get_id());
         response.put("message", "Login successful");
         return ResponseEntity.ok(response);
     }

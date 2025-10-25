@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -24,6 +24,8 @@ import IndiaBanks from "../assets/icon4.png";
 import WorldBanks from "../assets/icon3.png";
 import AIPowered from "../assets/icon5.jpg";
 import ProcessIntelligence from "../assets/icon6.png";
+import axios from "axios";
+import { AuthContext } from "../context/AuthContext";
 
 const UploadPage = () => {
   const navigate = useNavigate();
@@ -42,6 +44,7 @@ const UploadPage = () => {
     success: false,
     message: "",
   });
+  const user_id = useContext(AuthContext).userId;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -66,34 +69,35 @@ const UploadPage = () => {
       return;
     }
     setLoadingSuggestions(true);
+
     try {
-      const res = await fetch(
-        `http://localhost:8080/api/custID/${encodeURIComponent(q)}`
-      );
-      if (!res.ok) {
+      const res = await axios.post("http://localhost:8080/api/custID", {
+        cust_id: encodeURIComponent(q.trim()),
+        user_id: user_id,
+      });
+
+      if (res.status !== 200) {
         setSuggestions([]);
-      } else {
-        const data = await res.json();
-        // backend returns array of JSON strings; parse each and extract id and name
-        const opts = [];
-        for (const item of data) {
+        return;
+      }
+
+      const data = res.data;
+
+      const opts = data
+        .map((item) => {
           try {
             const parsed = typeof item === "string" ? JSON.parse(item) : item;
-            let id = null;
-            if (parsed._id) {
-              if (typeof parsed._id === "string") id = parsed._id;
-              else if (parsed._id.$oid) id = parsed._id.$oid;
-            }
-            // fallback keys
-            if (!id && parsed.cust_id) id = parsed.cust_id;
+            const id = parsed._id?.$oid || parsed._id || parsed.cust_id;
             const name = parsed.name || parsed.Name || "";
-            if (id) opts.push({ cust_id: id, name });
+            if (!id) return null;
+            return { cust_id: id, name };
           } catch (e) {
-            // ignore parse errors
+            return null;
           }
-        }
-        setSuggestions(opts);
-      }
+        })
+        .filter(Boolean);
+
+      setSuggestions(opts);
     } catch (e) {
       setSuggestions([]);
     } finally {
@@ -141,7 +145,7 @@ const UploadPage = () => {
           state: {
             extractedData: result.data,
             cust_id: customerType === "existing" ? formData.cust_id : null,
-            uploadedFiles: formData.files
+            uploadedFiles: formData.files,
           },
         });
       } else {

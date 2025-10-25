@@ -22,10 +22,12 @@ public class SearchByCustID {
     @Value("${spring.data.mongodb.uri}")
     private String mongoUriString;
 
-    @GetMapping("/custID/{cust_id}")
-    public ResponseEntity<?> getCustomerById(
-            @PathVariable("cust_id") String custId) {
+    @PostMapping("/custID")
+    public ResponseEntity<?> getCustomerById(@RequestBody Map<String, String> bodyReq) {
         try {
+            String custId = bodyReq.get("cust_id");
+            String user_id = bodyReq.get("user_id");
+
             try (var mongoClient = MongoClients.create(mongoUriString)) {
                 // ensures consistency of data that is read and returned
                 MongoDatabase database = mongoClient.getDatabase("kyc_db").withReadConcern(ReadConcern.MAJORITY);
@@ -33,7 +35,7 @@ public class SearchByCustID {
                 MongoCollection<Document> collection = database.getCollection("document");
 
                 Pattern pattern = Pattern.compile(custId, Pattern.CASE_INSENSITIVE);
-                Document query = new Document("cust_id", pattern);
+                Document query = new Document("cust_id", pattern).append("user_id", user_id);
 
                 Document projection = new Document("name", 1)
                         .append("cust_id", 1)

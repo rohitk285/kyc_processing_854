@@ -11,8 +11,8 @@ public class UserModel {
     @Id
     private String _id; // automatically indexed as _id by mongo db
 
-    @Indexed(unique = true)
-    private String user_id; // unique user identifier
+    // @Indexed(unique = true)
+    // private String user_id; // unique user identifier
 
     @NotBlank(message = "username must not be blank")
     @Indexed
@@ -28,11 +28,17 @@ public class UserModel {
         this.password = password;
     }
 
-    public String getUser_id() {
-        return user_id;
+    // public String getUser_id() {
+    //     return user_id;
+    // }
+    // public void setUser_id(String user_id) {
+    //     this.user_id = user_id;
+    // }
+    public String get_id() {
+        return _id;
     }
-    public void setUser_id(String user_id) {
-        this.user_id = user_id;
+    public void set_id(String _id) {
+        this._id = _id;
     }
     public String getUsername() {
         return username;

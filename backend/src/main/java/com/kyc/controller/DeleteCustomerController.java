@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.mongodb.WriteConcern;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
@@ -25,14 +26,22 @@ public class DeleteCustomerController {
         try (var mongoClient = MongoClients.create(mongoUriString)) {
             ClientSession session = mongoClient.startSession();
             return session.withTransaction(() -> {
-                MongoDatabase db = mongoClient.getDatabase("kyc_db");
+                MongoDatabase db = mongoClient.getDatabase("kyc_db").withWriteConcern(WriteConcern.MAJORITY);
 
-                String[] collections = { "document", "aadhaar", "pan", "creditcard", "cheque", "drivinglicense",
-                        "passport" };
+                MongoCollection<Document> documentCollection = db.getCollection("document");
+                Document docQuery = new Document("cust_id", custId);
+                long deleted = documentCollection.deleteOne(session, docQuery).getDeletedCount();
+
+                if (deleted == 0) {
+                    return ResponseEntity.status(404).body(Map.of("status", "error", "message", "Customer not found"));
+                }
+
+                String[] collections = { "aadhaar", "pan", "creditcard", "cheque", "drivinglicense", "passport" };
 
                 for (String colName : collections) {
                     MongoCollection<Document> collection = db.getCollection(colName);
-                    collection.deleteOne(new Document("cust_id", custId));
+                    Document query = new Document("cust_id", custId);
+                    collection.deleteOne(session, query);
                 }
 
                 return ResponseEntity.ok(Map.of("status", "success", "message", "Customer deleted successfully!"));
