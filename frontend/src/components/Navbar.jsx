@@ -10,6 +10,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
@@ -88,7 +89,7 @@ const Navbar = () => {
                         text === "By Upload Date"
                           ? "/retrievedate"
                           : text === "By Customer Name"
-                          ? "/"
+                          ? "/retrieve-customer"
                           : "/retrievedoc"
                       );
                     }}
@@ -104,7 +105,7 @@ const Navbar = () => {
                 <Button
                   key={text}
                   onClick={() => {
-                    if (text === "Upload") navigate("/uploadDocs");
+                    if (text === "Upload") navigate("/");
                     else if (text === "Update") navigate("/updateDetails");
                     else if (text === "Delete") setDeleteOpen(true);
                     else if (text === "Logout") {

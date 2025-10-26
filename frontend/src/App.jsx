@@ -2,7 +2,6 @@ import { Routes, Route, BrowserRouter } from "react-router-dom";
 import UploadPage from './Pages/UploadPage';
 import EntryPage from "./Pages/EntryPage";
 import UserDetailsPage from "./Pages/UserDetailsPage";
-import SettingsPage from "./Pages/SettingsPage";
 import RetrievalPageDoc from "./Pages/RetrievalPageDoc";
 import RetrievalPageDate from "./Pages/RetrievalPageDate";
 import ConfirmDetailsPage from "./Pages/ConfirmDetailsPage";
@@ -22,10 +21,9 @@ function App() {
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/sign-up" element={<PublicRoute><SignupPage /></PublicRoute>} />
 
-          <Route path="/" element={<ProtectedRoute><EntryPage /></ProtectedRoute>} />
-          <Route path="/uploadDocs" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
+          <Route path="/retrieve-customer" element={<ProtectedRoute><EntryPage /></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
           <Route path="/user-details" element={<ProtectedRoute><UserDetailsPage /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/retrievedoc" element={<ProtectedRoute><RetrievalPageDoc /></ProtectedRoute>} />
           <Route path="/retrievedate" element={<ProtectedRoute><RetrievalPageDate /></ProtectedRoute>} />
           <Route path="/confirm-details" element={<ProtectedRoute><ConfirmDetailsPage /></ProtectedRoute>} />
