@@ -9,7 +9,7 @@ import {
   Container,
   CircularProgress,
 } from "@mui/material";
-import { CheckCircle, ErrorOutline, WarningAmber } from "@mui/icons-material";
+import { WarningAmber } from "@mui/icons-material";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
