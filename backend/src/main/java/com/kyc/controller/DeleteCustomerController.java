@@ -11,7 +11,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 
-import java.util.Map;
+import java.util.*;
 // import java.util.HashMap;
 
 @RestController
@@ -21,15 +21,18 @@ public class DeleteCustomerController {
     @Value("${spring.data.mongodb.uri}")
     private String mongoUriString;
 
-    @DeleteMapping("/deleteCustomer/{custId}")
-    public ResponseEntity<?> deleteCustomer(@PathVariable String custId) {
+    @DeleteMapping("/deleteCustomer")
+    public ResponseEntity<?> deleteCustomer(@RequestBody Map<String, String> bodyReq) {
+        String custId = bodyReq.get("cust_id");
+        String userId = bodyReq.get("user_id");
+
         try (var mongoClient = MongoClients.create(mongoUriString)) {
             ClientSession session = mongoClient.startSession();
             return session.withTransaction(() -> {
                 MongoDatabase db = mongoClient.getDatabase("kyc_db").withWriteConcern(WriteConcern.MAJORITY);
 
                 MongoCollection<Document> documentCollection = db.getCollection("document");
-                Document docQuery = new Document("cust_id", custId);
+                Document docQuery = new Document("cust_id", custId).append("user_id", userId);
                 long deleted = documentCollection.deleteOne(session, docQuery).getDeletedCount();
 
                 if (deleted == 0) {

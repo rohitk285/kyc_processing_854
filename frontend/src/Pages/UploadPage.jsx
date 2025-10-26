@@ -44,7 +44,7 @@ const UploadPage = () => {
     success: false,
     message: "",
   });
-  const user_id = useContext(AuthContext).userId;
+  const { user_id, username } = useContext(AuthContext);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -204,6 +204,17 @@ const UploadPage = () => {
           sx={{ width: { xs: "100%", sm: "40%" } }}
           className="-translate-y-24 translate-x-10"
         >
+          <Typography
+            sx={{
+              fontSize: "28px",
+              fontWeight: "semibold",
+              color: "#FFFFFF",
+              marginBottom: 2,
+              fontFamily: "Oswald",
+            }}
+          >
+            Welcome {username} !
+          </Typography>
           <Typography
             variant="h4"
             component="h1"
