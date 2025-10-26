@@ -44,20 +44,18 @@ const ConfirmDetailsPage = () => {
   const [newFieldValue, setNewFieldValue] = useState("");
   const user_id = useContext(AuthContext).userId;
 
-  // Save / Name Inconsistency Modal
   const [resultModal, setResultModal] = useState({
     open: false,
     success: true,
     message: "",
   });
 
-  // Check for Name inconsistency across all documents - not working - revamp later
   useEffect(() => {
     const nameValues = documents
       .map(
-        doc =>
+        (doc) =>
           doc.named_entities?.name?.trim() ??
-          doc.extraFields.find(f => f.key.toLowerCase() === "name")?.value?.trim()
+          doc.extraFields.find((f) => f.key.toLowerCase() === "name")?.value?.trim()
       )
       .filter((v) => v !== undefined);
 
@@ -141,57 +139,56 @@ const ConfirmDetailsPage = () => {
     setDocuments(updated);
   };
 
-  // NEW: Detect conflicts and navigate to secondary page
+  // ✅ FIXED: Pass extraFields properly to secondary page
   const handleConfirm = () => {
     if (documents.length <= 1) {
-      handleSave(); // no conflicts possible
+      handleSave();
       return;
     }
 
-    // Collect all field keys
     const allKeys = new Set();
-    documents.forEach(doc => {
-      Object.keys(doc.named_entities || {}).forEach(k => allKeys.add(k.trim()));
-      doc.extraFields.forEach(f => allKeys.add(f.key.trim()));
+    documents.forEach((doc) => {
+      Object.keys(doc.named_entities || {}).forEach((k) => allKeys.add(k.trim()));
+      doc.extraFields?.forEach((f) => allKeys.add(f.key.trim()));
     });
 
     const mergedFields = {};
     const conflictingFields = new Set();
 
-    allKeys.forEach(key => {
-      const values = documents.map(doc => {
+    allKeys.forEach((key) => {
+      const values = documents.map((doc) => {
         const val =
           doc.named_entities?.[key] ??
-          doc.extraFields.find(f => f.key === key)?.value ??
+          doc.extraFields?.find((f) => f.key === key)?.value ??
           "";
         return val?.trim() ?? "";
       });
       const uniqueValues = Array.from(new Set(values));
       if (uniqueValues.length === 1) {
-        mergedFields[key] = uniqueValues[0]; // same across all docs
+        mergedFields[key] = uniqueValues[0];
       } else {
-        conflictingFields.add(key); // conflict exists
+        conflictingFields.add(key);
       }
     });
 
     if (conflictingFields.size > 0) {
-      // Navigate to secondary confirmation page
-      navigate("/secondaryConfirm", { state: { documents: documents, uploadedFiles: uploadedFiles, custId: custId } });
+      navigate("/secondaryConfirm", {
+        state: {
+          documents: documents.map((doc) => ({
+            ...doc,
+            named_entities: { ...doc.named_entities },
+            extraFields: doc.extraFields ? [...doc.extraFields] : [],
+          })),
+          uploadedFiles,
+          custId,
+        },
+      });
     } else {
-      handleSave(); // no conflicts, save directly
+      handleSave();
     }
   };
 
   const handleSave = async () => {
-    // prepare final docs
-    const finalDocs = documents.map(doc => {
-      const merged = { ...doc.named_entities };
-      doc.extraFields.forEach(f => {
-        if (f.key.trim()) merged[f.key] = f.value;
-      });
-      return { ...doc, named_entities: merged, extraFields: undefined };
-    });
-
     try {
       setLoading(true);
       const endpoint = custId
@@ -199,9 +196,7 @@ const ConfirmDetailsPage = () => {
         : "http://localhost:8080/api/saveDetails";
 
       const formData = new FormData();
-      uploadedFiles.forEach((file) => {
-        formData.append("files", file);
-      });
+      uploadedFiles.forEach((file) => formData.append("files", file));
 
       const finalDocs = documents.map((doc) => {
         const merged = { ...doc.named_entities };
@@ -214,7 +209,6 @@ const ConfirmDetailsPage = () => {
           extraFields: undefined,
         };
         if (custId) baseDocs.cust_id = custId;
-
         return baseDocs;
       });
 
@@ -311,10 +305,7 @@ const ConfirmDetailsPage = () => {
 
       {uploadedFiles.length > 0 && (
         <Box sx={{ mb: 4 }}>
-          <Typography
-            variant="h6"
-            sx={{ mb: 1, fontWeight: "bold", color: "#444" }}
-          >
+          <Typography variant="h6" sx={{ mb: 1, fontWeight: "bold", color: "#444" }}>
             Uploaded Files:
           </Typography>
           <ul>
@@ -352,37 +343,35 @@ const ConfirmDetailsPage = () => {
             </Typography>
 
             <Grid container spacing={2}>
-              {Object.entries(doc.named_entities || {}).map(
-                ([key, value], i) => (
-                  <Grid
-                    item
-                    xs={12}
-                    sm={6}
-                    key={`original-${i}`}
-                    sx={{ display: "flex", alignItems: "center" }}
+              {Object.entries(doc.named_entities || {}).map(([key, value], i) => (
+                <Grid
+                  item
+                  xs={12}
+                  sm={6}
+                  key={`original-${i}`}
+                  sx={{ display: "flex", alignItems: "center" }}
+                >
+                  <TextField
+                    label={key}
+                    value={value}
+                    onChange={(e) =>
+                      handleFieldChange(index, key, e.target.value)
+                    }
+                    fullWidth
+                    variant="outlined"
+                    sx={{
+                      "& .MuiInputBase-root": { backgroundColor: "#f9f9f9" },
+                    }}
+                  />
+                  <IconButton
+                    onClick={() => handleDeleteField(index, key)}
+                    color="error"
+                    sx={{ ml: 1 }}
                   >
-                    <TextField
-                      label={key}
-                      value={value}
-                      onChange={(e) =>
-                        handleFieldChange(index, key, e.target.value)
-                      }
-                      fullWidth
-                      variant="outlined"
-                      sx={{
-                        "& .MuiInputBase-root": { backgroundColor: "#f9f9f9" },
-                      }}
-                    />
-                    <IconButton
-                      onClick={() => handleDeleteField(index, key)}
-                      color="error"
-                      sx={{ ml: 1 }}
-                    >
-                      <Delete />
-                    </IconButton>
-                  </Grid>
-                )
-              )}
+                    <Delete />
+                  </IconButton>
+                </Grid>
+              ))}
 
               {doc.extraFields.map((field, i) => (
                 <Grid
@@ -409,7 +398,11 @@ const ConfirmDetailsPage = () => {
                       "& .MuiInputBase-root": { backgroundColor: "#f9f9f9" },
                     }}
                   />
-                  <IconButton onClick={() => handleDeleteField(index, i, true)} color="error" sx={{ ml: 1 }}>
+                  <IconButton
+                    onClick={() => handleDeleteField(index, i, true)}
+                    color="error"
+                    sx={{ ml: 1 }}
+                  >
                     <Delete />
                   </IconButton>
                 </Grid>
@@ -417,7 +410,11 @@ const ConfirmDetailsPage = () => {
             </Grid>
 
             <Box sx={{ mt: 2, textAlign: "right" }}>
-              <Button startIcon={<AddCircleOutline />} onClick={() => handleAddFieldModal(index)} variant="outlined">
+              <Button
+                startIcon={<AddCircleOutline />}
+                onClick={() => handleAddFieldModal(index)}
+                variant="outlined"
+              >
                 Add Field
               </Button>
             </Box>
@@ -430,7 +427,7 @@ const ConfirmDetailsPage = () => {
           variant="contained"
           color="primary"
           size="large"
-          onClick={handleConfirm} // <-- updated
+          onClick={handleConfirm}
         >
           Confirm & Continue
         </Button>

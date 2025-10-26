@@ -28,13 +28,14 @@ const SecondaryConfirmPage = () => {
   const [loading, setLoading] = useState(false);
   const user_id = useContext(AuthContext).userId;
 
+  // ✅ Identify common and conflicting fields
   useEffect(() => {
     if (!documents.length) return;
 
-    // Collect all keys from all documents
     const allKeys = new Set();
     documents.forEach((doc) => {
       Object.keys(doc.named_entities || {}).forEach((k) => allKeys.add(k));
+      (doc.extraFields || []).forEach((f) => allKeys.add(f.key));
     });
 
     const common = {};
@@ -42,7 +43,13 @@ const SecondaryConfirmPage = () => {
 
     allKeys.forEach((key) => {
       const values = documents
-        .map((doc) => (doc.named_entities?.[key] || "").trim())
+        .map((doc) => {
+          const val =
+            doc.named_entities?.[key] ??
+            doc.extraFields?.find((f) => f.key === key)?.value ??
+            "";
+          return val.trim();
+        })
         .filter((v) => v !== "");
 
       const uniqueValues = [...new Set(values)];
@@ -70,19 +77,16 @@ const SecondaryConfirmPage = () => {
         ? "http://localhost:8080/api/saveDetailsExisting"
         : "http://localhost:8080/api/saveDetails";
 
-      // Merge common fields and conflictingFields entered by user
+      // Merge common + user-entered conflict values
       const finalEntities = { ...commonFields, ...conflictingFields };
       const finalDocs = documents.map((doc) => ({
         ...doc,
-        cust_id: custId,
+        ...(custId && { cust_id: custId }),
         named_entities: finalEntities,
       }));
 
       const formData = new FormData();
-      uploadedFiles.forEach((file) => {
-        formData.append("files", file);
-      });
-
+      uploadedFiles.forEach((file) => formData.append("files", file));
       formData.append("documents", JSON.stringify(finalDocs));
       formData.append("user_id", user_id);
 
@@ -148,6 +152,7 @@ const SecondaryConfirmPage = () => {
           <CircularProgress color="inherit" />
         </Box>
       )}
+
       <Typography variant="h4" sx={{ fontWeight: "bold", marginBottom: 4 }}>
         Confirm Conflicting Details
       </Typography>
