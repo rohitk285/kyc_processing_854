@@ -325,7 +325,7 @@ const UploadPage = () => {
                   }}
                   loading={loadingSuggestions}
                   renderOption={(props, option) => {
-                    // option may be a string or object
+                    // option may be a String or Object
                     const custId =
                       typeof option === "string"
                         ? option
