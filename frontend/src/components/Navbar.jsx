@@ -57,7 +57,7 @@ const Navbar = () => {
             }}
             onClick={() => navigate("/")}
           >
-            Appian
+            KHR
           </Typography>
 
           <Box>
@@ -89,8 +89,8 @@ const Navbar = () => {
                         text === "By Upload Date"
                           ? "/retrievedate"
                           : text === "By Customer Name"
-                          ? "/retrieve-customer"
-                          : "/retrieve-custid"
+                            ? "/retrieve-customer"
+                            : "/retrieve-custid"
                       );
                     }}
                   >

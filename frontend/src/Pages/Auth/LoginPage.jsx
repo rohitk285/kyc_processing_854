@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
+import loginLogo from './login_logo.png';
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
@@ -35,7 +36,7 @@ const LoginPage = () => {
       {/* Left Section */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-white p-6">
         <img
-          src="https://cdni.iconscout.com/illustration/premium/thumb/login-authentication-illustration-download-in-svg-png-gif-file-formats--access-sign-in-computer-security-pack-user-interface-illustrations-3851050.png"
+          src={loginLogo}
           alt="Login Illustration"
           className="w-3/4 max-w-sm md:w-2/3"
         />

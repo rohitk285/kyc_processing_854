@@ -1,39 +1,40 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import loginLogo from './login_logo.png';
 
 const SignupPage = () => {
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const navigate = useNavigate();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await fetch("http://localhost:8080/auth/register", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: username, password: password }),
-            });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("http://localhost:8080/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username, password: password }),
+      });
 
-            if (!res.ok) {
-                const errorData = await res.text();
-                alert("Signup failed: " + errorData);
-                return;
-            }
+      if (!res.ok) {
+        const errorData = await res.text();
+        alert("Signup failed: " + errorData);
+        return;
+      }
 
-            alert("Signup successful! Please login.");
-            navigate("/login");
-        } catch (err) {
-            console.error("Signup error:", err);
-        }
-    };
+      alert("Signup successful! Please login.");
+      navigate("/login");
+    } catch (err) {
+      console.error("Signup error:", err);
+    }
+  };
 
   return (
     <div className="flex flex-col md:flex-row h-screen">
       {/* Left Section (Illustration) */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-white p-6">
         <img
-          src="https://cdni.iconscout.com/illustration/premium/thumb/signup-illustration-download-in-svg-png-gif-file-formats--registration-signup-user-interface-pack-people-illustrations-3851051.png"
+          src={loginLogo}
           alt="Signup Illustration"
           className="w-3/4 max-w-sm md:w-2/3"
         />
