@@ -55,7 +55,7 @@ const Navbar = () => {
               color: "#FF5722",
               fontFamily: "Bebas Neue",
             }}
-            onClick={() => navigate("/uploadDocs")}
+            onClick={() => navigate("/")}
           >
             Appian
           </Typography>
@@ -79,7 +79,7 @@ const Navbar = () => {
               onClose={handleMenuClose}
               onMouseLeave={handleMenuClose}
             >
-              {["By Upload Date", "By Customer Name", "By Document Type"].map(
+              {["By Upload Date", "By Customer Name", "By Customer ID"].map(
                 (text, idx) => (
                   <MenuItem
                     key={idx}
@@ -90,7 +90,7 @@ const Navbar = () => {
                           ? "/retrievedate"
                           : text === "By Customer Name"
                           ? "/retrieve-customer"
-                          : "/retrievedoc"
+                          : "/retrieve-custid"
                       );
                     }}
                   >
