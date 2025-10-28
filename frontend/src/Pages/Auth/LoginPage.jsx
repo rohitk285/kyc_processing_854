@@ -2,16 +2,19 @@ import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import loginLogo from './login_logo.png';
+import { Box, CircularProgress, Typography } from "@mui/material";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setLoading(true);
       const res = await fetch("http://localhost:8080/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -28,11 +31,31 @@ const LoginPage = () => {
       navigate("/");
     } catch (err) {
       console.error("Login error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="flex flex-col md:flex-row h-screen">
+      {loading && (
+        <Box
+          sx={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.7)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+          }}
+        >
+          <Box sx={{ textAlign: "center", color: "#fff" }}>
+            <CircularProgress sx={{ color: "#FE8D01" }} />
+            <Typography sx={{ mt: 2 }}>Logging in...</Typography>
+          </Box>
+        </Box>
+      )}
       {/* Left Section */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-white p-6">
         <img
