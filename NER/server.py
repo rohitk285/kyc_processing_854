@@ -3,7 +3,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from io import BytesIO
-from text_ext import process_pdf_with_gemini
+from text_ext import process_file_with_gemini
 
 app = Flask(__name__)
 CORS(app)
@@ -27,8 +27,8 @@ def upload_details():
             # Read file content in memory
             file_stream = BytesIO(file.read())
 
-            # Process PDF using Llama
-            document_data = process_pdf_with_gemini(file_stream)
+            # Process file
+            document_data = process_file_with_gemini(file_stream, file.filename)
             if not document_data:
                 return jsonify({"error": f"Failed to process document: {file.filename}"}), 500
 

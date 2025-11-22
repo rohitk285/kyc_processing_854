@@ -283,16 +283,35 @@ def normalize_json_response(parsed_response):
 
     return normalized
 
-def process_pdf_with_gemini(file_stream, json_output_path=None):
-    images = pdf_to_images(file_stream)
-    if not images:
-        return []
-
+def process_file_with_gemini(file_stream, filename, json_output_path=None):
+    """
+    Process either a PDF or an image file using Gemini API and extract entities.
+    """
+    extension = filename.lower().split(".")[-1]
     all_responses = []
     valid_document_types = ["Aadhaar Card", "PAN Card", "Cheque", "Credit Card", "Driving License", "Passport"]
 
+    images = []
+    
+    if extension == "pdf":
+        print("Detected PDF file. Converting pages to images...")
+        images = pdf_to_images(file_stream)
+
+    elif extension in ["jpg", "jpeg", "png"]:
+        print("Detected image file. Preparing for Gemini API...")
+    
+        image = Image.open(file_stream).convert("RGB")
+        img_buffer = BytesIO()
+        image.save(img_buffer, format="PNG")
+        img_buffer.seek(0)
+        images = [img_buffer]
+
+    else:
+        print("Unsupported file format. Please upload PDF, JPG, JPEG, or PNG.")
+        return []
+
     for idx, image_io in enumerate(images):
-        print(f"Processing page {idx+1}/{len(images)}")
+        print(f"Processing image {idx + 1}/{len(images)}")
 
         base64_image = base64_encode_image(image_io)
         raw_response = call_gemini_api(getDescriptionPrompt, base64_image)

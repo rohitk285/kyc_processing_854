@@ -12,6 +12,8 @@ import SignupPage from "./Pages/Auth/SignUpPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import RetrievalPageCustID from "./Pages/RetrievalPageCustID";
+import UploadFingerprintPage from "./Pages/UploadFingerPrint";
+
 
 function App() {
   return (
@@ -30,6 +32,7 @@ function App() {
           <Route path="/updateDetails" element={<ProtectedRoute><UpdateDetails /></ProtectedRoute>} />
           <Route path="/user-details-update" element={<ProtectedRoute><UserDetailsUpdate /></ProtectedRoute>} />
           <Route path="/secondaryConfirm" element={<ProtectedRoute><SecondaryConfirmPage /></ProtectedRoute>} />
+          <Route path="/uploadFingerprint" element={<ProtectedRoute><UploadFingerprintPage/></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </div>

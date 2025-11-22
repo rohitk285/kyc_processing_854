@@ -100,18 +100,19 @@ const Navbar = () => {
               )}
             </Menu>
 
-            {["Upload", "Update", "Delete", "Logout"].map(
+            {["Upload Doc", "Upload Fingerprint", "Update", "Delete", "Logout"].map(
               (text) => (
                 <Button
                   key={text}
                   onClick={() => {
-                    if (text === "Upload") navigate("/");
+                    if (text === "Upload Doc") navigate("/");
                     else if (text === "Update") navigate("/updateDetails");
                     else if (text === "Delete") setDeleteOpen(true);
                     else if (text === "Logout") {
                       logout();
                       navigate("/login");
                     }
+                    else if (text === "Upload Fingerprint") navigate("/uploadFingerprint");
                   }}
                   sx={{
                     color: "#000",

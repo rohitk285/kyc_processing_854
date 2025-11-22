@@ -83,6 +83,12 @@ public class FetchLinksByCustID {
                                     .projection(projection).first();
                             map.put("Passport", resultPassport);
                             break;
+                        case "Fingerprint":
+                            MongoCollection<Document> fingerprintCollection = db.getCollection("fingerprint");
+                            Document resultFingerprint = fingerprintCollection.find(query)
+                                    .projection(projection).first();
+                            map.put("Fingerprint", resultFingerprint);
+                            break;
                         default:
                             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                     .body("Invalid document type: " + dType);

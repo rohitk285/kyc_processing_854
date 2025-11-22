@@ -18,10 +18,9 @@ import axios from "axios";
 import Navbar from "../components/Navbar";
 import { AuthContext } from "../context/AuthContext";
 
-const UploadPage = () => {
+const UploadFingerprintPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ files: [], cust_id: "" });
-  const [customerType, setCustomerType] = useState("new");
   const [suggestions, setSuggestions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [suggestionsTimer, setSuggestionsTimer] = useState(null);
@@ -35,11 +34,6 @@ const UploadPage = () => {
   const username = useContext(AuthContext).username;
   const user_id = useContext(AuthContext).userId;
   const isMobile = useMediaQuery("(max-width: 600px)");
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
 
   const handleFileChange = (e) => {
     const { files } = e.target;
@@ -95,7 +89,7 @@ const UploadPage = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      if (customerType === "existing" && !formData.cust_id.trim()) {
+      if (!formData.cust_id.trim()) {
         setAlert({
           open: true,
           success: false,
@@ -108,25 +102,35 @@ const UploadPage = () => {
         return;
       }
 
-      const formDataToSend = new FormData();
-      formData.files.forEach((file) => formDataToSend.append("file", file));
-      if (customerType === "existing") {
-        formDataToSend.append("cust_id", formData.cust_id);
+      if (formData.files.length === 0) {
+        setAlert({
+          open: true,
+          success: false,
+          message: "Please upload at least one file",
+        });
+        return;
       }
 
-      const response = await fetch("http://localhost:8080/api/details", {
+      const formDataToSend = new FormData();
+      formData.files.forEach((file) => {
+        formDataToSend.append("files", file);
+      });
+      formDataToSend.append("cust_id", formData.cust_id);
+      formDataToSend.append("user_id", user_id);
+
+      const response = await fetch("http://localhost:8080/api/fingerprint", {
         method: "POST",
         body: formDataToSend,
       });
-      const result = await response.json();
+
+    //   const result = await response.json();
 
       if (response.ok) {
-        navigate("/confirm-details", {
-          state: {
-            extractedData: result.data,
-            cust_id: customerType === "existing" ? formData.cust_id : null,
-            uploadedFiles: formData.files,
-          },
+        console.log("Fingerprint uploaded successfully");
+        setAlert({
+          open: true,
+          success: true,
+          message: "Fingerprint uploaded successfully!",
         });
       } else {
         setAlert({
@@ -135,7 +139,8 @@ const UploadPage = () => {
           message: result.message || "Something went wrong.",
         });
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       setAlert({ open: true, success: false, message: "Server Error" });
     } finally {
       setLoading(false);
@@ -188,131 +193,83 @@ const UploadPage = () => {
             variant="h4"
             sx={{ fontWeight: "bold", fontFamily: "Oswald", mb: 2 }}
           >
-            Upload Your Documents
+            Upload Your Fingerprint
           </Typography>
 
-          {/* Customer Type */}
-          <ToggleButtonGroup
-            value={customerType}
-            exclusive
-            onChange={handleCustomerType}
-            aria-label="customer-type"
-            sx={{
-              mb: 2,
-              backgroundColor: "rgba(255,255,255,0.9)",
-              borderRadius: "15px",
-              p: 0.5,
-              display: "flex",
-              justifyContent: "center",
-              boxShadow: "0 0 10px rgba(254,141,1,0.3)",
-            }}
-          >
-            {["new", "existing"].map((type) => (
-              <ToggleButton
-                key={type}
-                value={type}
-                sx={{
-                  color: "#333",
-                  textTransform: "capitalize",
-                  fontWeight: "bold",
-                  fontSize: "16px",
-                  px: 3,
-                  py: 1,
-                  borderRadius: "10px !important",
-                  border: "none",
-                  transition: "0.2s ease-in-out",
-                  "&.Mui-selected": {
-                    backgroundColor: "#FE8D01 !important",
-                    color: "#fff !important",
-                    boxShadow: "0 0 10px rgba(254,141,1,0.6)",
-                  },
-                }}
-              >
-                {type === "new" ? "New Customer" : "Existing Customer"}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-
-          {customerType === "existing" && (
-            <Box sx={{ width: "100%", maxWidth: "600px" }}>
-              <Autocomplete
-                freeSolo
-                fullWidth
-                options={suggestions || []}
-                getOptionLabel={(opt) =>
-                  typeof opt === "string"
-                    ? opt
-                    : `${opt.cust_id}`
-                }
-                loading={loadingSuggestions}
-                onInputChange={(e, val) => {
-                  if (suggestionsTimer) clearTimeout(suggestionsTimer);
-                  const t = setTimeout(() => fetchSuggestions(val), 350);
-                  setSuggestionsTimer(t);
-                  setFormData({ ...formData, cust_id: val });
-                }}
-                onChange={(e, newVal) =>
-                  setFormData({
-                    ...formData,
-                    cust_id:
-                      typeof newVal === "string"
-                        ? newVal
-                        : newVal?.cust_id || "",
-                  })
-                }
-                renderOption={(props, option) => (
-                  <Box
-                    component="li"
-                    {...props}
+          <Box sx={{ width: "100%", maxWidth: "600px" }}>
+            <Autocomplete
+              freeSolo
+              fullWidth
+              options={suggestions || []}
+              getOptionLabel={(opt) =>
+                typeof opt === "string" ? opt : `${opt.cust_id}`
+              }
+              loading={loadingSuggestions}
+              onInputChange={(e, val) => {
+                if (suggestionsTimer) clearTimeout(suggestionsTimer);
+                const t = setTimeout(() => fetchSuggestions(val), 350);
+                setSuggestionsTimer(t);
+                setFormData({ ...formData, cust_id: val });
+              }}
+              onChange={(e, newVal) =>
+                setFormData({
+                  ...formData,
+                  cust_id:
+                    typeof newVal === "string" ? newVal : newVal?.cust_id || "",
+                })
+              }
+              renderOption={(props, option) => (
+                <Box
+                  component="li"
+                  {...props}
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    p: 1.2,
+                    borderBottom: "1px solid #eee",
+                    "&:hover": { backgroundColor: "rgba(254,141,1,0.08)" },
+                  }}
+                >
+                  <Typography
+                    variant="body1"
                     sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "flex-start",
-                      p: 1.2,
-                      borderBottom: "1px solid #eee",
-                      "&:hover": { backgroundColor: "rgba(254,141,1,0.08)" },
+                      fontWeight: "bold",
+                      fontFamily: "monospace",
+                      color: "#333",
                     }}
                   >
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        fontWeight: "bold",
-                        fontFamily: "monospace",
-                        color: "#333",
-                      }}
-                    >
-                      {option.cust_id}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        color: "#555",
-                        fontFamily: "Oswald",
-                        letterSpacing: "0.3px",
-                      }}
-                    >
-                      {option.name || " "}
-                    </Typography>
-                  </Box>
-                )}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Customer ID"
-                    variant="outlined"
-                    fullWidth
+                    {option.cust_id}
+                  </Typography>
+                  <Typography
+                    variant="body2"
                     sx={{
-                      backgroundColor: "#fff",
-                      borderRadius: 1,
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: "10px",
-                      },
+                      color: "#555",
+                      fontFamily: "Oswald",
+                      letterSpacing: "0.3px",
                     }}
-                  />
-                )}
-              />
-            </Box>
-          )}
+                  >
+                    {option.name || " "}
+                  </Typography>
+                </Box>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Customer ID"
+                  variant="outlined"
+                  fullWidth
+                  sx={{
+                    backgroundColor: "#fff",
+                    borderRadius: 1,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "10px",
+                    },
+                  }}
+                />
+              )}
+            />
+          </Box>
 
           {/* Upload Section */}
           <Box
@@ -334,7 +291,7 @@ const UploadPage = () => {
           >
             <CloudUpload sx={{ fontSize: 48, color: "#FE8D01" }} />
             <Typography sx={{ mt: 1, color: "#fff" }}>
-              Click or drag files to upload (PDF , JPEG , JPG   , PNG)
+              Click or drag files to upload (.fingerprint)
             </Typography>
             <input
               type="file"
@@ -481,4 +438,4 @@ const UploadPage = () => {
   );
 };
 
-export default UploadPage;
+export default UploadFingerprintPage;
